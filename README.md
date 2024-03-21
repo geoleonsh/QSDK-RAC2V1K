@@ -1,4 +1,4 @@
-# QSDK12.4.5 FOR IPQ806X 
+# QSDK12.4.5 FOR RAC2V1K 
  
 **Usage:** 
 * WORKDIR  
@@ -12,4 +12,6 @@
   make V=99
   
 **OpenWRT Version:**  
-23.05
+23.05 
+
+**Added some extra applications for rac2v1k**

@@ -3620,7 +3620,7 @@ CONFIG_PACKAGE_kmod-mii=m
 # CONFIG_PACKAGE_kmod-qca-cnss is not set
 # CONFIG_CNSS2_MODULE is not set
 # CONFIG_PACKAGE_kmod-qca-cnss-stream is not set
-# CONFIG_PACKAGE_kmod-qca-nss-drv-lite is not set
+CONFIG_PACKAGE_kmod-qca-nss-drv-lite=y
 # CONFIG_PACKAGE_kmod-qca-nss-eip is not set
 # CONFIG_PACKAGE_kmod-qca-nss-eip-crypto is not set
 CONFIG_PACKAGE_kmod-qca-nss-gmac=y

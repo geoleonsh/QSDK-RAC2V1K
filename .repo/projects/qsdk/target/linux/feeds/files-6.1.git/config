@@ -1,0 +1,11 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+[filter "lfs"]
+	smudge = git-lfs smudge --skip -- %f
+	process = git-lfs filter-process --skip
+[remote "clo"]
+	url = https://git.codelinaro.org/clo/qsdk/oss/kernel/linux-ipq-files
+	review = codelinaro.org
+	projectname = clo/qsdk/oss/kernel/linux-ipq-files
+	fetch = +refs/heads/*:refs/remotes/clo/*

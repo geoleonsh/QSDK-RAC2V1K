@@ -1,0 +1,42 @@
+From 9ca4000e4659b694e1bfbca3d5c4b86d60ec69ef Mon Sep 17 00:00:00 2001
+From: Ram Chandra Jangir <quic_rjangir@quicinc.com>
+Date: Thu, 1 Jun 2023 20:49:43 +0530
+Subject: [PATCH 09/12] feeds: add an initial feeds.conf file
+
+Change-Id: Id80351918ed2bdf4181980dfec61e69af02f0257
+Signed-off-by: Ram Chandra Jangir <quic_rjangir@quicinc.com>
+---
+ feeds.conf | 21 +++++++++++++++++++++
+ 1 file changed, 21 insertions(+)
+ create mode 100644 feeds.conf
+
+diff --git a/feeds.conf b/feeds.conf
+new file mode 100644
+index 0000000000..367b0da00e
+--- /dev/null
++++ b/feeds.conf
+@@ -0,0 +1,21 @@
++src-git-full packages https://git.openwrt.org/feed/packages.git;openwrt-23.05
++src-git-full luci https://git.openwrt.org/project/luci.git;openwrt-23.05
++src-git-full routing https://git.openwrt.org/feed/routing.git;openwrt-23.05
++src-link bootloader ../qca/feeds/bootloader
++src-link qcom_utils_internal ../qca/feeds/qcom-utils-internal
++src-link platform_utils ../qca/feeds/platform_utils
++src-link qca_platform_utils ../qca/feeds/qca-platform-proprietary
++src-link networking ../qca/feeds/networking
++src-link nss_host ../qca/feeds/nss-host
++src-link ssdk ../qca/feeds/ssdk
++src-link wifi_debug_tools ../qca/feeds/wifi-debug-tools
++src-link wifi_fw_headers ../qca/feeds/wifi-fw-headers
++src-link athdiag ../qca/feeds/athdiag
++src-link wlan ../qca/feeds/wlan
++src-link qca ../qca/feeds/qca
++src-link qca_hk ../qca/feeds/qca_hk
++src-link sigma_dut ../qca/feeds/sigma-dut
++src-link wapid ../qca/feeds/wapid
++src-link qca_wapi ../qca/feeds/qca-wapi
++src-link wlan_utils ../qca/feeds/wlan_utils
++src-link qca_mcs ../qca/feeds/qca-mcs
+-- 
+2.17.1
+

@@ -1,0 +1,233 @@
+From 7a4be116c6ca15d002624b04ee267df285ccb2cb Mon Sep 17 00:00:00 2001
+From: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
+Date: Thu, 8 Jun 2023 09:59:14 +0530
+Subject: [PATCH] hostapd: Enable WDS AP MLO Support
+
+Turn on wds ap mld for the unknow station 4addr which creates the vlan
+interface with the sta link information.
+
+Each associated 4addr client's wds mlo vlan interface name has
+to be given a unique name, and logic should be included to establish
+a unique id for each station in hapd mld,
+which is then used to form a unique vlan interface name.
+
+Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
+---
+ src/ap/hostapd.h                   |  1 +
+ src/ap/ieee802_11.c                | 67 ++++++++++++++++++++++++++++--
+ src/ap/ieee802_11.h                |  1 +
+ src/ap/sta_info.h                  |  1 +
+ src/drivers/driver_nl80211_event.c |  8 ++++
+ 5 files changed, 74 insertions(+), 4 deletions(-)
+
+--- a/src/ap/hostapd.h
++++ b/src/ap/hostapd.h
+@@ -509,6 +509,7 @@ struct hostapd_mld {
+ 	u8 num_links;
+ 	bool if_setup_done;
+ 	bool mld_start_blocked;
++	u32 wds_sta_uid[AID_WORDS];
+ };
+ #endif
+ 
+--- a/src/ap/ieee802_11.c
++++ b/src/ap/ieee802_11.c
+@@ -4238,6 +4238,47 @@ static void hostapd_clone_ml_aid(struct
+ 	}
+ }
+ 
++int hostapd_get_wds_mld_sta_uid(struct hostapd_data *hapd, struct sta_info *sta)
++{
++	int i, j = 32, aid;
++	struct hostapd_mld *hapd_mld = hapd->mld;
++
++	/* get a unique ID */
++	if (sta->wds_mld_uid > 0) {
++		wpa_printf(MSG_DEBUG, "  old UID %d", sta->wds_mld_uid);
++		return 0;
++	}
++
++	if (!hapd_mld)
++		return -1;
++
++	for (i = 0; i < AID_WORDS; i++) {
++		if (hapd_mld->wds_sta_uid[i] == (u32) -1)
++			continue;
++		for (j = 0; j < 32; j++) {
++			if (!(hapd_mld->wds_sta_uid[i] & BIT(j))) {
++				break;
++			}
++		}
++
++		if (j < 32)
++			break;
++	}
++	if (j == 32)
++		return -1;
++
++	aid = i * 32 + j;
++
++	if (aid > 2007)
++		return -1;
++
++	sta->wds_mld_uid = aid;
++	hapd_mld->wds_sta_uid[i] |= BIT(j);
++
++	wpa_printf(MSG_DEBUG, "  new UID %d", sta->wds_mld_uid);
++
++	return 0;
++}
+ 
+ int hostapd_get_aid(struct hostapd_data *hapd, struct sta_info *sta)
+ {
+@@ -7508,6 +7549,12 @@ static void handle_assoc_cb(struct hosta
+ 			   MAC2STR(sta->addr));
+ 		sta->pending_wds_enable = 0;
+ 		sta->flags |= WLAN_STA_WDS;
++		if (hapd->mld && hostapd_get_wds_mld_sta_uid(hapd, sta) < 0) {
++			wpa_printf(MSG_DEBUG, "No room for uid"
++				   "to enable 4-address WDS mode for STA "
++				   MACSTR, MAC2STR(sta->addr));
++			return;
++		}
+ 	}
+ 
+ 	/* WPS not supported on backhaul BSS & disable 4addr mode on FH */
+@@ -7516,12 +7563,18 @@ static void handle_assoc_cb(struct hosta
+ 		!(sta->flags & WLAN_STA_WPS))) {
+ 		int ret;
+ 		char ifname_wds[IFNAMSIZ + 1];
++		int aid;
++
++		if (hapd->mld && (sta->flags & WLAN_STA_WDS))
++			aid = sta->wds_mld_uid;
++		else
++			aid = sta->aid;
+ 
+ 		wpa_printf(MSG_DEBUG, "Reenable 4-address WDS mode for STA "
+ 			   MACSTR " (aid %u)",
+-			   MAC2STR(sta->addr), sta->aid);
++			   MAC2STR(sta->addr), aid);
+ 		ret = hostapd_set_wds_sta(hapd, ifname_wds, sta->addr,
+-					  sta->aid, 1);
++					  aid, 1);
+ 		if (!ret)
+ 			hostapd_set_wds_encryption(hapd, sta, ifname_wds);
+ 	}
+@@ -7858,6 +7911,7 @@ void ieee802_11_rx_from_unknown(struct h
+ 				int wds)
+ {
+ 	struct sta_info *sta;
++	int aid = 0;
+ 
+ 	sta = ap_get_sta(hapd, src);
+ 
+@@ -7867,6 +7921,19 @@ void ieee802_11_rx_from_unknown(struct h
+ 		if (!hapd->conf->wds_sta)
+ 			return;
+ 
++		if (hapd->mld && wds) {
++			if (hostapd_get_wds_mld_sta_uid(hapd, sta) < 0) {
++				wpa_printf(MSG_DEBUG, "No room for uid"
++					   "to enable 4-address WDS mode for STA "
++					    MACSTR, MAC2STR(sta->addr));
++				return;
++			}
++			aid = sta->wds_mld_uid;
++		}
++		else {
++			aid = sta->aid;
++		}
++
+ 		if ((sta->flags & (WLAN_STA_ASSOC | WLAN_STA_ASSOC_REQ_OK)) ==
+ 		    WLAN_STA_ASSOC_REQ_OK) {
+ 			wpa_printf(MSG_DEBUG,
+@@ -7883,10 +7950,10 @@ void ieee802_11_rx_from_unknown(struct h
+ 
+ 			wpa_printf(MSG_DEBUG, "Enable 4-address WDS mode for "
+ 				   "STA " MACSTR " (aid %u)",
+-				   MAC2STR(sta->addr), sta->aid);
++				   MAC2STR(sta->addr), aid);
+ 			sta->flags |= WLAN_STA_WDS;
+ 			ret = hostapd_set_wds_sta(hapd, ifname_wds,
+-						  sta->addr, sta->aid, 1);
++						  sta->addr, aid, 1);
+ 			if (!ret)
+ 				hostapd_set_wds_encryption(hapd, sta,
+ 							   ifname_wds);
+--- a/src/ap/ieee802_11.h
++++ b/src/ap/ieee802_11.h
+@@ -100,6 +100,7 @@ void hostapd_get_eht_240mhz_capab(struct
+ 				  struct ieee80211_240mhz_vendor_oper *dest,
+ 				  size_t len);
+ int hostapd_get_aid(struct hostapd_data *hapd, struct sta_info *sta);
++int hostapd_get_wds_mld_sta_uid(struct hostapd_data *hapd, struct sta_info *sta);
+ u16 copy_sta_ht_capab(struct hostapd_data *hapd, struct sta_info *sta,
+ 		      const u8 *ht_capab);
+ u16 copy_sta_vendor_vht(struct hostapd_data *hapd, struct sta_info *sta,
+--- a/src/ap/sta_info.h
++++ b/src/ap/sta_info.h
+@@ -140,6 +140,7 @@ struct sta_info {
+ 	be32 ipaddr;
+ 	struct dl_list ip6addr; /* list head for struct ip6addr */
+ 	u16 aid; /* STA's unique AID (1 .. 2007) or 0 if not yet assigned */
++	u16 wds_mld_uid;
+ 	u16 disconnect_reason_code; /* RADIUS server override */
+ 	u32 flags; /* Bitfield of WLAN_STA_* */
+ 	u16 capability;
+--- a/src/drivers/driver_nl80211_event.c
++++ b/src/drivers/driver_nl80211_event.c
+@@ -2113,6 +2113,7 @@ static void nl80211_spurious_frame(struc
+ {
+ 	struct wpa_driver_nl80211_data *drv = bss->drv;
+ 	union wpa_event_data event;
++	int link_id = -1;
+ 
+ 	if (!tb[NL80211_ATTR_MAC])
+ 		return;
+@@ -2122,6 +2123,13 @@ static void nl80211_spurious_frame(struc
+ 	event.rx_from_unknown.addr = nla_data(tb[NL80211_ATTR_MAC]);
+ 	event.rx_from_unknown.wds = wds;
+ 
++	if (wds && tb[NL80211_ATTR_MLO_LINK_ID]) {
++		link_id = nla_get_u8(tb[NL80211_ATTR_MLO_LINK_ID]);
++		bss = get_link_bss_ifindex(bss, -1, link_id);
++		event.rx_from_unknown.bssid = bss->addr;
++		drv = bss->drv;
++	}
++
+ 	wpa_supplicant_event(drv->ctx, EVENT_RX_FROM_UNKNOWN, &event);
+ }
+ 
+--- a/src/ap/sta_info.c
++++ b/src/ap/sta_info.c
+@@ -278,8 +278,16 @@ void ap_free_sta(struct hostapd_data *ha
+ 
+ 	if (sta->flags & WLAN_STA_WDS || (sta->flags & WLAN_STA_MULTI_AP &&
+ 		!(hapd->conf->multi_ap & FRONTHAUL_BSS) &&
+-		!(sta->flags & WLAN_STA_WPS)))
+-		hostapd_set_wds_sta(hapd, NULL, sta->addr, sta->aid, 0);
++		!(sta->flags & WLAN_STA_WPS))) {
++		int aid;
++		
++		if (hapd->mld && (sta->flags & WLAN_STA_WDS))
++			aid = sta->wds_mld_uid;
++		else
++			aid = sta->aid;
++	
++		hostapd_set_wds_sta(hapd, NULL, sta->addr, aid, 0);
++	}
+ 
+ 	if (sta->ipaddr)
+ 		hostapd_drv_br_delete_ip_neigh(hapd, 4, (u8 *) &sta->ipaddr);
+@@ -298,6 +306,10 @@ void ap_free_sta(struct hostapd_data *ha
+ 		hapd->sta_aid[(sta->aid - 1) / 32] &=
+ 			~BIT((sta->aid - 1) % 32);
+ 
++	if (sta->wds_mld_uid > 0)
++		hapd->mld->wds_sta_uid[(sta->wds_mld_uid - 1) / 32] &=
++				~BIT((sta->wds_mld_uid - 1) % 32);
++
+ 	hapd->num_sta--;
+ 	if (sta->nonerp_set) {
+ 		sta->nonerp_set = 0;

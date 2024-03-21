@@ -1,0 +1,32 @@
+From f78dc0a92ec1b4a828e6ff0ab0ce0f1e830851f5 Mon Sep 17 00:00:00 2001
+From: Amutha Ravikumar <quic_aravikum@quicinc.com>
+Date: Wed, 14 Jun 2023 09:09:55 +0530
+Subject: [PATCH] To resolve compilation error
+
+Signed-off-by: Amutha Ravikumar <quic_aravikum@quicinc.com>
+---
+ wpa_supplicant/wpa_supplicant.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+--- a/wpa_supplicant/wpa_supplicant.c
++++ b/wpa_supplicant/wpa_supplicant.c
+@@ -3019,7 +3019,9 @@ skip_80mhz:
+ 				    freq->sec_channel_offset,
+ 				    chwidth, seg0, seg1, vht_caps,
+ 				    &mode->he_capab[ieee80211_mode],
+-				    NULL) != 0)
++				    &mode->eht_capab[ieee80211_mode], 0,
++				    freq->ru_punct_bitmap,
++				    freq->ru_punct_ofdma) != 0)
+ 		return false;
+ 
+ 	*freq = vht_freq;
+@@ -3037,7 +3039,7 @@ void ibss_mesh_setup_freq(struct wpa_sup
+ 	int ieee80211_mode = wpas_mode_to_ieee80211_mode(ssid->mode);
+ 	enum hostapd_hw_mode hw_mode;
+ 	struct hostapd_hw_modes *mode = NULL;
+-	int i, obss_scan = 1;
++	int obss_scan = 1;
+ 	u8 channel;
+ 	bool is_6ghz, is_24ghz;
+ 

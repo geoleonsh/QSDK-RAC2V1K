@@ -1,0 +1,61 @@
+From a739851c8cab512351552d7ffddd3ff50ab32593 Mon Sep 17 00:00:00 2001
+From: Murat Sezgin <msezgin@codeaurora.org>
+Date: Tue, 2 Feb 2021 13:09:45 -0800
+Subject: [PATCH] [ppp] don't notify netifd when ppp interface disconnect
+ because of idle
+
+When ppp interface is configured at demand mode, it will disconnect
+if no traffic for an idle time. Once disconnected, pppd notify netifd
+with a link down event. Then ppp interface was brought down by netifd,
+so default route lost, and no traffic trigger its reconnecting.
+
+Actually ppp interface is up at this time. It will reconnect once
+traffic are sent on it again. So in concept ppp interface is in up state.
+So link down event shouldn't be sent to netifd.
+
+Change-Id: I1c0baec522535737191e9e3065ec30b6652d2a0c
+Signed-off-by: Xiaoping Fan <xfan@codeaurora.org>
+Signed-off-by: Murat Sezgin <msezgin@codeaurora.org>
+Signed-off-by: Ken Zhu <quic_guigenz@quicinc.com>
+---
+ .../services/ppp/files/lib/netifd/ppp-down    | 24 +++++++++++++++++++
+ 1 file changed, 24 insertions(+)
+
+diff --git a/package/network/services/ppp/files/lib/netifd/ppp-down b/package/network/services/ppp/files/lib/netifd/ppp-down
+index 94cefc415e64..acb12cb6051e 100755
+--- a/package/network/services/ppp/files/lib/netifd/ppp-down
++++ b/package/network/services/ppp/files/lib/netifd/ppp-down
+@@ -1,6 +1,30 @@
+ #!/bin/sh
+ PPP_IPPARAM="$6"
+ 
++skip_idle_on_demand_mode()
++{
++	#don't skip updating if it is a real down event
++	local is_up=$(ifconfig $IFNAME |grep UP |grep RUNNING)
++	[ -z "$is_up" ] && return 1
++
++	. /lib/functions.sh
++	. /lib/functions/network.sh
++
++	local demand
++	config_load network
++	config_get demand $PPP_IPPARAM demand
++
++	#don't skip updating if ppp is not in demand mode
++	[ -z "$demand" ] && return 1
++
++	#now ppp is in demand mode, and ppp interface is still up
++	#so it is not a real down event, just skip it
++	return 0
++}
++
++#skip fake down event in demand mode
++skip_idle_on_demand_mode && return 0
++
+ . /lib/netifd/netifd-proto.sh
+ proto_init_update "$IFNAME" 0
+ proto_send_update "$PPP_IPPARAM"
+-- 
+2.34.1
+

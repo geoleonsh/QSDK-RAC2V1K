@@ -1,0 +1,33 @@
+From dafe12eb345ac164cd58feedb25bbb4d59f9bf2a Mon Sep 17 00:00:00 2001
+From: Ram Chandra Jangir <quic_rjangir@quicinc.com>
+Date: Mon, 19 Jun 2023 15:16:12 +0530
+Subject: [PATCH] scripts/download.pl: fix download() function
+
+This change fixes download() function to
+download tarballs from nfs/clo server first,
+
+Change-Id: Ib432bd163008b8dda648ffafd9490aeaa9b24dcd
+Signed-off-by: Ram Chandra Jangir <quic_rjangir@quicinc.com>
+---
+ scripts/download.pl | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/scripts/download.pl b/scripts/download.pl
+index 4f8bfcf1489e..ef26ca5833d5 100755
+--- a/scripts/download.pl
++++ b/scripts/download.pl
+@@ -351,7 +351,10 @@ while (!$ok and !-f "$target/$filename") {
+ 	my $mirror = shift @clo_mirrors;
+ 	$mirror or last;
+ 
+-	download($mirror);
++	download($mirror, $url_filename, @clo_mirrors);
++	if (!-f "$target/$filename" && $url_filename ne $filename) {
++		download($mirror, $filename, @clo_mirrors);
++	}
+ 	-f "$target/$filename" and $ok = 1;
+ }
+ 
+-- 
+2.34.1
+

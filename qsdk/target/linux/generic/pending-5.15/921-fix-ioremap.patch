@@ -1,0 +1,10 @@
+--- a/arch/arm/include/asm/io.h
++++ b/arch/arm/include/asm/io.h
+@@ -384,6 +384,7 @@ static inline void memcpy_toio(volatile
+  */
+ void __iomem *ioremap(resource_size_t res_cookie, size_t size);
+ #define ioremap ioremap
++#define ioremap_nocache ioremap
+ 
+ /*
+  * Do not use ioremap_cache for mapping memory. Use memremap instead.

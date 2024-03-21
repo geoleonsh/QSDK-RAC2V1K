@@ -1,0 +1,35 @@
+From d9af7f558b4a0e82d8ecfe9fff59df7fa64670c9 Mon Sep 17 00:00:00 2001
+From: Ermine Jose <quic_erminejo@quicinc.com>
+Date: Thu, 16 Mar 2023 15:40:36 +0530
+Subject: [PATCH 04/12] config: invoke qsdk configurations from openwrt-patches
+
+This change helps to invoke the qsdk releated
+configuration which is moved to openwrt-patches
+directory as part of menuconfig
+
+Change-Id: I506ee236959ff106003edf5950aa56bbe4d4474e
+Signed-off-by: Ermine Jose <quic_erminejo@quicinc.com>
+---
+ config/Config-build.in | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/config/Config-build.in b/config/Config-build.in
+index df2d9101ca..976fa1b829 100644
+--- a/config/Config-build.in
++++ b/config/Config-build.in
+@@ -130,9 +130,12 @@ menu "Global build settings"
+ 		  Useful for release builds, so that kernel issues can be debugged offline
+ 		  later.
+ 
++	source "openwrt-patches/config/Config-build.in"
++
+ 	menu "Kernel build options"
+ 
+ 	source "config/Config-kernel.in"
++	source "openwrt-patches/config/Config-kernel.in"
+ 
+ 	endmenu
+ 
+-- 
+2.17.1
+

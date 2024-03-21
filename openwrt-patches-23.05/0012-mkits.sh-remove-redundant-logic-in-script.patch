@@ -1,0 +1,55 @@
+From be89497b7f42aa52c0c07ef4fbdc7517ba44b291 Mon Sep 17 00:00:00 2001
+From: Ermine Jose <quic_erminejo@quicinc.com>
+Date: Thu, 27 Apr 2023 17:15:11 +0530
+Subject: [PATCH 12/12] mkits.sh: remove redundant logic in script
+
+ use REFERENCE_CHAR macro instead of hard coded char
+ clean up logic to count number of dtbs available
+
+Change-Id: Ic2535994016fd78340a2c3064ff5ff4c076ee9c0
+Signed-off-by: Ermine Jose <quic_erminejo@quicinc.com>
+---
+ scripts/mkits.sh | 16 +++-------------
+ 1 file changed, 3 insertions(+), 13 deletions(-)
+
+diff --git a/scripts/mkits.sh b/scripts/mkits.sh
+index 9434560650..f556e294f3 100755
+--- a/scripts/mkits.sh
++++ b/scripts/mkits.sh
+@@ -190,9 +190,9 @@ Generate_Config() {
+ 	GEN_CONF_FUNC_USED=1
+ 
+ 	CONFIG_CONCATENATED_OUTPUT="$CONFIG_CONCATENATED_OUTPUT
+-		config@$CONFIG_ID {
++		config${REFERENCE_CHAR}$CONFIG_ID {
+ 			description = \"OpenWrt\";
+-			kernel = \"kernel@1\";
++			kernel = \"kernel${REFERENCE_CHAR}1\";
+ 			${FDT_PROP}
+ 			${LOADABLES:+loadables = ${LOADABLES};}
+ 			${COMPATIBLE_PROP}
+@@ -201,20 +201,10 @@ Generate_Config() {
+ "
+ }
+ 
+-check_forMultiDTB() {
+-	var=0
+-	for i in $@
+-	do
+-		var=$((var + 1))
+-	done
+-	return $var
+-}
+-
+ # Conditionally create fdt information
+ if [ -n "${DTB}" ]; then
+ 	CONFIG_ID=$DTB
+-	check_forMultiDTB $DTB
+-	multiDTB=$?
++	multiDTB=$(echo $DTB | wc -w)
+ 	for dtb in $DTB
+ 	do
+ 	if [ $multiDTB -gt 1 ]; then
+-- 
+2.17.1
+

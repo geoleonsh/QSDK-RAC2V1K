@@ -1,0 +1,36 @@
+From 7c8359b3ecc755b1f757c2481083585e36f90c5f Mon Sep 17 00:00:00 2001
+From: Ram Chandra Jangir <quic_rjangir@quicinc.com>
+Date: Tue, 6 Jun 2023 15:46:54 +0530
+Subject: [PATCH 11/12] include: rename qsdk-package to openwrt-patches
+
+Change-Id: I0022fcdb80211a6fabf80b40deb0e908a78ee115
+Signed-off-by: Ram Chandra Jangir <quic_rjangir@quicinc.com>
+---
+ include/download.mk | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/include/download.mk b/include/download.mk
+index cbd25ca10c..ac9a58e283 100644
+--- a/include/download.mk
++++ b/include/download.mk
+@@ -331,14 +331,14 @@ define Download/default
+   $(if $(PKG_HASH),HASH:=$(PKG_HASH))
+ endef
+ 
+-FindPackage?=$(strip $(shell find $(TOPDIR)/qsdk-package -name $(1) 2>/dev/null))
++FindPackage?=$(strip $(shell find $(TOPDIR)/openwrt-patches -name $(1) 2>/dev/null))
+ 
+-define Download/qsdk-package
++define Download/openwrt-patches
+   $(eval -include $(wildcard $(call FindPackage,$(basename $(notdir $(CURDIR))))/$(PKG_NAME).mk))
+ endef
+ 
+ define Download
+-  $(Download/qsdk-package)
++  $(Download/openwrt-patches)
+   $(eval $(Download/Defaults))
+   $(eval $(Download/$(1)))
+   $(foreach FIELD,URL FILE $(Validate/$(call dl_method,$(URL),$(PROTO))),
+-- 
+2.17.1
+

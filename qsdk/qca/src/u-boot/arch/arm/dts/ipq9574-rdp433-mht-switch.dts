@@ -1,0 +1,81 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+* Copyright (c) 2023, Qualcomm Innovation Center, Inc. All rights reserved.
+*/
+
+#include "ipq9574-rdp433.dts"
+
+/ {
+	config_name = "config@al02-c10", "config@rdp433-mht-switch", "config-rdp433-mht-switch";
+
+};
+
+&phy_rst_pinmux {
+	/delete-node/ qti_8085_rst;
+
+	qti_8x8x_rst {
+		pins = "GPIO_60";
+		drive-strength = <DRIVE_STRENGTH_8MA>;
+		bias-pull-up;
+	};
+};
+
+/delete-node/ &phy0;
+/delete-node/ &phy1;
+/delete-node/ &phy2;
+/delete-node/ &phy3;
+
+&mdio {
+	phy0: ethernet-switch@1 {
+		phy-reset-gpio = <&tlmm 60 0>;
+		dev-mode = <0x1>;
+		reg = <1>;
+		phy_id = <10>;
+		id = <1>;
+		uniphy_id = <0>;
+		uniphy_type = <0>;
+		max_speed = <2500>;
+		force-speed;
+		xgmac;
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port0: port@0 {
+				reg = <0>;
+				label = "cpu";
+				phy-mode = "sgmii-2500";
+				fixed-link {
+					speed = <2500>;
+					full-duplex;
+				};
+			};
+
+			port1: port@1 {
+				reg = <1>;
+				label = "lan";
+			};
+
+			port2: port@2 {
+				reg = <2>;
+				label = "lan";
+			};
+
+			port3: port@3 {
+				reg = <3>;
+				label = "lan";
+			};
+
+			port4: port@4 {
+				reg = <4>;
+				label = "lan";
+			};
+		};
+	};
+};
+
+&ethernet {
+	/delete-property/ phy-handle1;
+	/delete-property/ phy-handle2;
+	/delete-property/ phy-handle3;
+};

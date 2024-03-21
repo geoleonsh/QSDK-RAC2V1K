@@ -1,0 +1,47 @@
+From d32b7ce67f55a53b007f86454ef5676ca332c9c0 Mon Sep 17 00:00:00 2001
+From: Murat Sezgin <msezgin@codeaurora.org>
+Date: Thu, 11 Feb 2021 08:47:04 -0800
+Subject: [PATCH] [ppp] specify ipv6 remote interface identifier in demand mode
+
+PPP demand mode need to set up PPP interface before real traffic.
+This fake PPP interface need an IPv6 link local address. PPP need
+local and remote interface identifier to create this IPv6 link local
+address. So we have to specify local and remote interface identifier
+if we want to enable IPv6 in demand mode.
+
+Change-Id: I8e6f4c86d91a55bce19594772272a66051f0c5d4
+Signed-off-by: Xiaoping Fan <xfan@codeaurora.org>
+Signed-off-by: Ram Chandra Jangir <rjangi@codeaurora.org>
+Signed-off-by: Murat Sezgin <msezgin@codeaurora.org>
+Signed-off-by: Ken Zhu <quic_guigenz@quicinc.com>
+---
+ package/network/services/ppp/files/ppp.sh | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/package/network/services/ppp/files/ppp.sh b/package/network/services/ppp/files/ppp.sh
+index 6d3a8e29ffae..ed82bfd1dabc 100755
+--- a/package/network/services/ppp/files/ppp.sh
++++ b/package/network/services/ppp/files/ppp.sh
+@@ -100,8 +100,10 @@ ppp_generic_setup() {
+ 	fi
+ 
+ 	if [ "${demand:-0}" -gt 0 ]; then
++		[ "$ipv6" = 1 ] && ipv6="ipv6 ,::0a70:7070 ipv6cp-use-persistent"
+ 		demand="precompiled-active-filter /etc/ppp/filter demand idle $demand"
+ 	else
++		[ "$ipv6" = 1 ] && ipv6="+ipv6"
+ 		demand=""
+ 	fi
+ 	if [ -n "$persist" ]; then
+@@ -139,7 +141,7 @@ ppp_generic_setup() {
+ 		ifname "$pppname" \
+ 		${localip:+$localip:} \
+ 		${lcp_failure:+lcp-echo-interval $lcp_interval lcp-echo-failure $lcp_failure $lcp_adaptive} \
+-		${ipv6:++ipv6} \
++		$ipv6 \
+ 		${autoipv6:+set AUTOIPV6=1} \
+ 		${ip6table:+set IP6TABLE=$ip6table} \
+ 		${peerdns:+set PEERDNS=$peerdns} \
+-- 
+2.34.1
+

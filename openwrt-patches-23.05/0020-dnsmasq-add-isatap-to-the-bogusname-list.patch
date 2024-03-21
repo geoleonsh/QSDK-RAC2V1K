@@ -1,0 +1,26 @@
+From 8266ba8b203a4e0c4287ddc0a15d0b8c8f73778a Mon Sep 17 00:00:00 2001
+From: Ken Zhu <guigenz@codeaurora.org>
+Date: Thu, 23 Apr 2020 19:58:58 -0700
+Subject: [PATCH] dnsmasq: add isatap to the bogusname list
+
+blacklist the domain names "wpad" and "isatap" from automated DNS record assignment
+as in the CERT (VU#598349) required
+
+Change-Id: I84342c81269be035759122728290545fe6341b1e
+Signed-off-by: Ken Zhu <guigenz@codeaurora.org>
+---
+ package/network/services/dnsmasq/files/dhcpbogushostname.conf | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/package/network/services/dnsmasq/files/dhcpbogushostname.conf b/package/network/services/dnsmasq/files/dhcpbogushostname.conf
+index e83b6975d03c..01b481ac037e 100644
+--- a/package/network/services/dnsmasq/files/dhcpbogushostname.conf
++++ b/package/network/services/dnsmasq/files/dhcpbogushostname.conf
+@@ -6,3 +6,4 @@
+ 
+ dhcp-name-match=set:dhcp_bogus_hostname,localhost
+ dhcp-name-match=set:dhcp_bogus_hostname,wpad
++dhcp-name-match=set:dhcp_bogus_hostname,isatap
+-- 
+2.34.1
+

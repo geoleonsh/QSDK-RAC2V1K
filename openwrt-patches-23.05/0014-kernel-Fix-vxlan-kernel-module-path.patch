@@ -1,0 +1,30 @@
+From f26be2003b037024b7574952e07c69b7102bd526 Mon Sep 17 00:00:00 2001
+From: Murat Sezgin <quic_msezgin@quicinc.com>
+Date: Mon, 24 Apr 2023 09:42:45 -0700
+Subject: [PATCH] kernel: Fix vxlan kernel module path
+
+vxlan.ko is created under drivers/net/vxlan directory
+in 6.1 kernel builds.
+
+Change-Id: I1c805548a2108765403d4b5c161d1e47bb2b4f09
+Signed-off-by: Murat Sezgin <quic_msezgin@quicinc.com>
+---
+ package/kernel/linux/modules/netsupport.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/package/kernel/linux/modules/netsupport.mk b/package/kernel/linux/modules/netsupport.mk
+index b73928980928..e02d9041ad70 100644
+--- a/package/kernel/linux/modules/netsupport.mk
++++ b/package/kernel/linux/modules/netsupport.mk
+@@ -92,7 +92,7 @@ define KernelPackage/vxlan
+ 	+kmod-udptunnel4 \
+ 	+IPV6:kmod-udptunnel6
+   KCONFIG:=CONFIG_VXLAN
+-  FILES:=$(LINUX_DIR)/drivers/net/vxlan.ko
++  FILES:=$(LINUX_DIR)/drivers/net/vxlan/vxlan.ko
+   AUTOLOAD:=$(call AutoLoad,13,vxlan)
+ endef
+ 
+-- 
+2.34.1
+

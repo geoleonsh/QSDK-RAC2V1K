@@ -1,0 +1,183 @@
+From 03f50206bf4d500a5b47aa182fb9c0d3599b9dbc Mon Sep 17 00:00:00 2001
+From: Ermine Jose <quic_erminejo@quicinc.com>
+Date: Thu, 16 Feb 2023 17:42:40 +0530
+Subject: [PATCH 03/12] mkits.sh: add support for multi dtb
+
+Support Multi DTB images to generate single itb image
+with multi-dtb compression
+
+Add single itb image with multiple dtb configurations
+Add support to create itb with compressed .dtb files
+
+support single itb images with config@1 and for
+multi dtb image with config@<rdp-variant>
+
+Change-Id: I2ee09788304b730c99a56692bc78dee22ecdcd81
+Signed-off-by: Ermine Jose <quic_erminejo@quicinc.com>
+---
+ scripts/mkits.sh | 108 +++++++++++++++++++++++++++++++++++++----------
+ 1 file changed, 86 insertions(+), 22 deletions(-)
+
+diff --git a/scripts/mkits.sh b/scripts/mkits.sh
+index bf75d69f09..9434560650 100755
+--- a/scripts/mkits.sh
++++ b/scripts/mkits.sh
+@@ -45,9 +45,13 @@ FDTNUM=1
+ ROOTFSNUM=1
+ INITRDNUM=1
+ HASH=sha1
++CONFIG_ID="1";
++COMPRESS="none";
++CONFIG="config@1"
+ LOADABLES=
+ DTOVERLAY=
+ DTADDR=
++COMPATIBLE_PROP=""
+ 
+ while getopts ":A:a:c:C:D:d:e:f:i:k:l:n:o:O:v:r:s:H:" OPTION
+ do
+@@ -57,7 +61,7 @@ do
+ 		c ) CONFIG=$OPTARG;;
+ 		C ) COMPRESS=$OPTARG;;
+ 		D ) DEVICE=$OPTARG;;
+-		d ) DTB=$OPTARG;;
++		d ) DTB="$DTB $OPTARG";;
+ 		e ) ENTRY_ADDR=$OPTARG;;
+ 		f ) COMPATIBLE=$OPTARG;;
+ 		i ) INITRD=$OPTARG;;
+@@ -97,27 +101,6 @@ fi
+ 	DTADDR="$FDTADDR"
+ }
+ 
+-# Conditionally create fdt information
+-if [ -n "${DTB}" ]; then
+-	FDT_NODE="
+-		fdt${REFERENCE_CHAR}$FDTNUM {
+-			description = \"${ARCH_UPPER} OpenWrt ${DEVICE} device tree blob\";
+-			${COMPATIBLE_PROP}
+-			data = /incbin/(\"${DTB}\");
+-			type = \"flat_dt\";
+-			${DTADDR:+load = <${DTADDR}>;}
+-			arch = \"${ARCH}\";
+-			compression = \"none\";
+-			hash${REFERENCE_CHAR}1 {
+-				algo = \"crc32\";
+-			};
+-			hash${REFERENCE_CHAR}2 {
+-				algo = \"${HASH}\";
+-			};
+-		};
+-"
+-	FDT_PROP="fdt = \"fdt${REFERENCE_CHAR}$FDTNUM\";"
+-fi
+ 
+ if [ -n "${INITRD}" ]; then
+ 	INITRD_NODE="
+@@ -202,6 +185,73 @@ OVCONFIGS=""
+ 	"
+ done
+ 
++GEN_CONF_FUNC_USED=""
++Generate_Config() {
++	GEN_CONF_FUNC_USED=1
++
++	CONFIG_CONCATENATED_OUTPUT="$CONFIG_CONCATENATED_OUTPUT
++		config@$CONFIG_ID {
++			description = \"OpenWrt\";
++			kernel = \"kernel@1\";
++			${FDT_PROP}
++			${LOADABLES:+loadables = ${LOADABLES};}
++			${COMPATIBLE_PROP}
++			${INITRD_PROP}
++		};
++"
++}
++
++check_forMultiDTB() {
++	var=0
++	for i in $@
++	do
++		var=$((var + 1))
++	done
++	return $var
++}
++
++# Conditionally create fdt information
++if [ -n "${DTB}" ]; then
++	CONFIG_ID=$DTB
++	check_forMultiDTB $DTB
++	multiDTB=$?
++	for dtb in $DTB
++	do
++	if [ $multiDTB -gt 1 ]; then
++		CONFIG_ID=$(basename ${dtb%%.gz} .dtb | sed -e 's/^\([^-]*-\)\{1\}//g');
++	else
++		CONFIG_ID=1
++	fi
++	COMPRESSION_DATA_FIELD=""
++	if [ "${COMPRESS}" != "none" ]; then
++		COMPRESSION_DATA_FIELD="compression= \"${DTB_COMPRESS}\"
++			load = <${DTB_LOAD_ADDR}>;"
++	else
++		COMPRESSION_DATA_FIELD="compression = \"none\";"
++	fi
++	COMPRESSION_DATA_FIELD="compression = \"none\";"
++
++	FDT_NODE="$FDT_NODE
++		fdt${REFERENCE_CHAR}$CONFIG_ID {
++			description = \"${ARCH_UPPER} OpenWrt ${DEVICE} device tree blob\";
++			data = /incbin/(\"${dtb}\");
++			type = \"flat_dt\";
++			${DTADDR:+load = <${DTADDR}>;}
++			arch = \"${ARCH}\";
++			$COMPRESSION_DATA_FIELD
++			hash@1 {
++				algo = \"crc32\";
++			};
++			hash@2 {
++				algo = \"${HASH}\";
++			};
++		};
++"
++	FDT_PROP="fdt = \"fdt${REFERENCE_CHAR}$CONFIG_ID\";"
++	Generate_Config
++	done
++fi
++
+ # Create a default, fully populated DTS file
+ DATA="/dts-v1/;
+ 
+@@ -234,6 +284,12 @@ ${ROOTFS_NODE}
+ 
+ 	configurations {
+ 		default = \"${CONFIG}\";
++"
++
++if [ $GEN_CONF_FUNC_USED -eq 1 ]; then
++	CONFIG_DATA=$CONFIG_CONCATENATED_OUTPUT
++else
++	CONFIG_DATA="
+ 		${CONFIG} {
+ 			description = \"OpenWrt ${DEVICE}\";
+ 			kernel = \"kernel${REFERENCE_CHAR}1\";
+@@ -242,9 +298,17 @@ ${ROOTFS_NODE}
+ 			${COMPATIBLE_PROP}
+ 			${INITRD_PROP}
+ 		};
++"
++fi
++
++DATA="$DATA
++$CONFIG_DATA"
++
++DATA="$DATA
+ 		${OVCONFIGS}
+ 	};
+ };"
+ 
++
+ # Write .its file to disk
+ echo "$DATA" > "${OUTPUT}"
+-- 
+2.17.1
+

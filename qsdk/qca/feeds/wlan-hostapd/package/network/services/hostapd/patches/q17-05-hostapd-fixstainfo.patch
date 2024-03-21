@@ -1,0 +1,15 @@
+--- a/src/ap/sta_info.h
++++ b/src/ap/sta_info.h
+@@ -243,10 +243,10 @@ struct sta_info {
+ 
+ 	struct os_reltime connected_time;
+ 
+-#ifdef CONFIG_SAE
++//#ifdef CONFIG_SAE
+ 	struct sae_data *sae;
+ 	unsigned int mesh_sae_pmksa_caching:1;
+-#endif /* CONFIG_SAE */
++//#endif /* CONFIG_SAE */
+ 
+ 	/* valid only if session_timeout_set == 1 */
+ 	struct os_reltime session_timeout;

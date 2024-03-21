@@ -1,0 +1,51 @@
+From d3c67a248cfa6d071209962e3c5aa456777059c0 Mon Sep 17 00:00:00 2001
+From: Zhu Ken <guigenz@codeaurora.org>
+Date: Tue, 20 Jan 2015 13:02:28 -0800
+Subject: [PATCH] netfilter:modulize sctp protocol feature support
+
+create sctp protocol support module
+
+Change-Id: Ie606baecd4b6fabef405027540c9430cb7289908
+Signed-off-by: Ken Zhu <guigenz@codeaurora.org>
+Signed-off-by: Ken Zhu <quic_guigenz@quicinc.com>
+---
+ package/kernel/linux/modules/netfilter.mk | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/package/kernel/linux/modules/netfilter.mk b/package/kernel/linux/modules/netfilter.mk
+index 7cfbecd949cf..2595091b30b0 100644
+--- a/package/kernel/linux/modules/netfilter.mk
++++ b/package/kernel/linux/modules/netfilter.mk
+@@ -109,6 +109,8 @@ define KernelPackage/nf-conntrack
+         CONFIG_NF_CONNTRACK_ZONES=y \
+ 	$(KCONFIG_NF_CONNTRACK)
+   FILES:=$(foreach mod,$(NF_CONNTRACK-m),$(LINUX_DIR)/net/$(mod).ko)
++# Netfilter GRE module depends on PPTP driver if PPTP is enabled
++  DEPENDS:=+PACKAGE_kmod-pptp:kmod-pptp +PACKAGE_kmod-ipt-sctp:kmod-lib-crc32c
+   AUTOLOAD:=$(call AutoProbe,$(notdir $(NF_CONNTRACK-m)))
+ endef
+ 
+@@ -758,6 +760,20 @@ endef
+ 
+ $(eval $(call KernelPackage,ipt-checksum))
+ 
++define KernelPackage/ipt-sctp
++  TITLE:=Module for sctp protocol netfilter
++  KCONFIG:=CONFIG_NETFILTER_XT_MATCH_SCTP \
++	   CONFIG_NF_CT_PROTO_SCTP=y
++  FILES:= $(LINUX_DIR)/net/netfilter/xt_sctp.ko
++  AUTOLOAD:=$(call AutoLoad,50,xt_sctp)
++  $(call AddDepends/ipt)
++endef
++
++define KernelPackage/ipt-sctp/description
++  Kernel modules for sctp iptables rules
++endef
++
++$(eval $(call KernelPackage,ipt-sctp))
+ 
+ define KernelPackage/ipt-iprange
+   TITLE:=Module for matching ip ranges
+-- 
+2.34.1
+

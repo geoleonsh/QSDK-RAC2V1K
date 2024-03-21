@@ -1,0 +1,46 @@
+diff -Nur -X patern.txt a/system-linux.c b/system-linux.c
+--- a/system-linux.c	2023-04-18 11:25:39.659965575 -0700
++++ b/system-linux.c	2023-04-18 11:28:34.378519249 -0700
+@@ -841,6 +841,33 @@
+ 	return path + 1;
+ }
+ 
++static int system_get_ifindex(const char *name)
++{
++	char path[64], buf[24];
++	int len;
++	FILE *f;
++	struct stat st;
++
++	snprintf(path, sizeof(path), "/sys/class/net/%s/ifindex", name);
++
++	if (stat(path, &st) < 0)
++		return 0;
++
++	f = fopen(path, "r");
++	if (!f) {
++		return 0;
++	}
++
++	len = fread(buf, 1, 23, f);
++	fclose(f);
++
++	if (len <= 0)
++		return 0;
++
++	buf[len] = 0;
++	return strtoul(buf, NULL, 0);
++}
++
+ static void
+ system_bridge_set_wireless(struct device *bridge, struct device *dev)
+ {
+@@ -1067,7 +1094,7 @@
+ 	if (!ioctl(sock_ioctl, SIOCGIFINDEX, &ifr))
+ 		return ifr.ifr_ifindex;
+ 	else
+-		return 0;
++		return system_get_ifindex(dev->ifname);
+ }
+ 
+ static int system_if_flags(const char *ifname, unsigned add, unsigned rem)

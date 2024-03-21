@@ -1,0 +1,10 @@
+--- a/drivers/net/wireless/ath/ath10k/Kconfig
++++ b/drivers/net/wireless/ath/ath10k/Kconfig
+@@ -7,6 +7,7 @@ config ATH10K
+ 	depends on CRC32
+ 	select BPAUTO_WANT_DEV_COREDUMP
+ 	select ATH10K_CE
++	default m
+ 	help
+ 	  This module adds support for wireless adapters based on
+ 	  Atheros IEEE 802.11ac family of chipsets.

@@ -1,0 +1,91 @@
+config KERNEL_KALLSYMS_ALL
+	bool "Include all symbols in kallsyms"
+	default n
+	depends on KERNEL_KALLSYMS
+	help
+	  This will give you more information in stack trace from kernel oopses.
+
+if KERNEL_KASAN
+
+	config KERNEL_KASAN_MODULE_TEST
+		tristate "KASAN MODULE TEST"
+		default n
+
+	config KERNEL_FRAME_WARN
+		int "Warn for stack frames larger than"
+		default 2048
+endif
+
+config KERNEL_PAGE_OWNER
+	bool "Page Onwer Tracking"
+	default n
+
+config KERNEL_DEBUG_KMEMLEAK
+	bool "Kernel memory leak detector"
+
+if KERNEL_DEBUG_KMEMLEAK
+
+	config KERNEL_HAVE_DEBUG_KMEMLEAK
+		bool
+		default y
+
+	config KERNEL_DEBUG_KMEMLEAK_MEM_POOL_SIZE
+		int "Kmemleak memory pool size"
+		default 16000
+
+	config KERNEL_DEBUG_KMEMLEAK_TEST
+		tristate "Simple test for the kernel memory leak detector"
+
+	config KERNEL_DEBUG_KMEMLEAK_DEFAULT_OFF
+		bool "Default kmemleak to off"
+endif
+
+config KERNEL_HWMON
+	tristate "Hardware Monitoring support"
+	depends on HAS_IOMEM
+
+config HAS_IOMEM
+	bool
+	depends on !NO_IOMEM
+	select GENERIC_IO
+	default y
+
+config KERNEL_CPU_THERMAL
+	bool "Enable CPU cooling device support"
+	default n
+
+config KERNEL_SKB_DEBUG
+	bool "Enable DEBUG Object support"
+
+if KERNEL_SKB_DEBUG
+
+	config KERNEL_DEBUG_OBJECTS
+		bool "Enable DEBUG Object support to track the lifetime of various objects"
+		default y
+
+	config KERNEL_DEBUG_OBJECTS_SELFTEST
+		bool "Enable Debug objects selftest"
+
+	config KERNEL_DEBUG_OBJECTS_FREE
+		bool "Debug objects in freed memory"
+
+	config KERNEL_DEBUG_OBJECTS_TIMERS
+		bool "Debug timer objects"
+
+	config KERNEL_DEBUG_OBJECTS_RCU_HEAD
+		bool "Debug RCU callbacks objects"
+
+	config KERNEL_DEBUG_OBJECTS_PERCPU_COUNTER
+		bool "Debug percpu counter objects"
+
+	config KERNEL_DEBUG_OBJECTS_WORK
+		bool "Debug work objects"
+
+	config KERNEL_DEBUG_OBJECTS_ENABLE_DEFAULT
+		int "debug_objects bootup default value (0-1)"
+		default 1
+endif
+
+config KERNEL_NET_IPGRE_BROADCAST
+	bool "IP: broadcast GRE over IP"
+	default y

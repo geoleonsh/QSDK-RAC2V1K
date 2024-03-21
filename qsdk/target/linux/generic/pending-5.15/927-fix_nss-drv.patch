@@ -1,0 +1,32 @@
+--- a/include/linux/skbuff.h
++++ b/include/linux/skbuff.h
+@@ -471,13 +471,19 @@ enum {
+ 	/* device driver is going to provide hardware time stamp */
+ 	SKBTX_IN_PROGRESS = 1 << 2,
+ 
++	/* device driver supports TX zero-copy buffers */
++	SKBTX_DEV_ZEROCOPY = 1 << 3,
++
+ 	/* generate wifi status information (where possible) */
+ 	SKBTX_WIFI_STATUS = 1 << 4,
+ 
++	SKBTX_SHARED_FRAG = 1 << 5,
++
+ 	/* generate software time stamp when entering packet scheduling */
+ 	SKBTX_SCHED_TSTAMP = 1 << 6,
+ };
+ 
++#define SKBTX_ZEROCOPY_FRAG	(SKBTX_DEV_ZEROCOPY | SKBTX_SHARED_FRAG)
+ #define SKBTX_ANY_SW_TSTAMP	(SKBTX_SW_TSTAMP    | \
+ 				 SKBTX_SCHED_TSTAMP)
+ #define SKBTX_ANY_TSTAMP	(SKBTX_HW_TSTAMP | SKBTX_ANY_SW_TSTAMP)
+--- a/include/linux/kernel.h
++++ b/include/linux/kernel.h
+@@ -190,6 +190,7 @@ void __might_fault(const char *file, int
+ static inline void might_fault(void) { }
+ #endif
+ 
++extern struct atomic_notifier_head panic_notifier_list;
+ void do_exit(long error_code) __noreturn;
+ void complete_and_exit(struct completion *, long) __noreturn;
+ 

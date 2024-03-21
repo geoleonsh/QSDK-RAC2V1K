@@ -1,0 +1,34 @@
+--- a/include/uapi/linux/switch.h
++++ b/include/uapi/linux/switch.h
+@@ -52,6 +52,8 @@ enum {
+ 	SWITCH_ATTR_OP_VALUE_PORTS,
+ 	SWITCH_ATTR_OP_VALUE_LINK,
+ 	SWITCH_ATTR_OP_DESCRIPTION,
++	SWITCH_ATTR_OP_VALUE_EXT,
++	SWITCH_ATTR_EXT,
+ 	/* port lists */
+ 	SWITCH_ATTR_PORT,
+ 	SWITCH_ATTR_MAX
+@@ -89,6 +91,7 @@ enum switch_val_type {
+ 	SWITCH_TYPE_PORTS,
+ 	SWITCH_TYPE_LINK,
+ 	SWITCH_TYPE_NOVAL,
++	SWITCH_TYPE_EXT
+ };
+ 
+ /* port nested attributes */
+@@ -113,6 +116,14 @@ enum {
+ 	SWITCH_LINK_ATTR_MAX,
+ };
+ 
++/* switch_ext nested attributes */
++enum {
++	SWITCH_EXT_UNSPEC,
++	SWITCH_EXT_NAME,
++	SWITCH_EXT_VALUE,
++	SWITCH_EXT_ATTR_MAX
++};
++
+ #define SWITCH_ATTR_DEFAULTS_OFFSET	0x1000
+ 
+ 

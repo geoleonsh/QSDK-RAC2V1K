@@ -1,0 +1,90 @@
+From 9709da660315679365046bbdc8967bf4354e3189 Mon Sep 17 00:00:00 2001
+From: Atchaya R <quic_ratchaya@quicinc.com>
+Date: Wed, 15 Mar 2023 16:47:48 +0530
+Subject: [PATCH 07/12] download.pl: add nfs mirror and clo server for package
+ download
+
+Change-Id: I013cf5a97e5e481fbbe645665d6c5bb95195ecb1
+Signed-off-by: Atchaya R <quic_ratchaya@quicinc.com>
+---
+ scripts/download.pl | 36 ++++++++++++++++++++++++++++++++----
+ 1 file changed, 32 insertions(+), 4 deletions(-)
+
+diff --git a/scripts/download.pl b/scripts/download.pl
+index 676c6e9e6b..4f8bfcf148 100755
+--- a/scripts/download.pl
++++ b/scripts/download.pl
+@@ -23,6 +23,8 @@ $url_filename = shift @ARGV unless $ARGV[0] =~ /:\/\//;
+ my $scriptdir = dirname($0);
+ my @mirrors;
+ my $ok;
++my $is_network_down = $ENV{'IS_NETWORK_DOWN'};
++my $nfs_server = $ENV{'NFS_MIRROR_SERVER'};
+ 
+ my $check_certificate = $ENV{DOWNLOAD_CHECK_CERTIFICATE} eq "y";
+ my $custom_tool = $ENV{DOWNLOAD_TOOL_CUSTOM};
+@@ -160,7 +162,7 @@ sub download
+ 			system("mkdir", "-p", "$target/");
+ 		}
+ 
+-		if (! open TMPDLS, "find $mirror -follow -name $filename 2>/dev/null |") {
++		if (! open TMPDLS, "find $mirror -not -path '*/[@.]*' -follow -name $filename 2>/dev/null |") {
+ 			print("Failed to search for $filename in $mirror\n");
+ 			return;
+ 		}
+@@ -238,7 +240,9 @@ sub cleanup
+ 	unlink "$target/$filename.hash";
+ }
+ 
+-@mirrors = localmirrors();
++if (!$is_network_down) {
++	@mirrors = localmirrors();
++}
+ 
+ foreach my $mirror (@ARGV) {
+ 	if ($mirror =~ /^\@SF\/(.+)$/) {
+@@ -330,6 +334,32 @@ push @mirrors, 'https://sources.cdn.openwrt.org';
+ push @mirrors, 'https://sources.openwrt.org';
+ push @mirrors, 'https://mirror2.openwrt.org/sources';
+ 
++$download_tool = select_tool();
++
++my @clo_mirrors;
++if ($nfs_server) {
++	push @clo_mirrors, "file://${nfs_server}";
++} else {
++	push @clo_mirrors, 'file:///prj/qct/openwrt/caf_mirrored_tarballs';
++}
++
++if (!$is_network_down) {
++	push @clo_mirrors, 'https://codelinaro.jfrog.io/artifactory/codelinaro-qsdk/';
++}
++#first check in NFS and CLO server
++while (!$ok and !-f "$target/$filename") {
++	my $mirror = shift @clo_mirrors;
++	$mirror or last;
++
++	download($mirror);
++	-f "$target/$filename" and $ok = 1;
++}
++
++if(!-f "$target/$filename") {
++	print ("The $target/$filename is not present in clo\n");
++	#exit -1;
++}
++
+ if (-f "$target/$filename") {
+ 	$hash_cmd and do {
+ 		if (system("cat '$target/$filename' | $hash_cmd > '$target/$filename.hash'")) {
+@@ -348,8 +378,6 @@ if (-f "$target/$filename") {
+ 	};
+ }
+ 
+-$download_tool = select_tool();
+-
+ while (!-f "$target/$filename") {
+ 	my $mirror = shift @mirrors;
+ 	$mirror or die "No more mirrors to try - giving up.\n";
+-- 
+2.17.1
+

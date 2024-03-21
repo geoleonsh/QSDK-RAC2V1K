@@ -1,0 +1,20 @@
+--- a/src/ap/ctrl_iface_ap.c
++++ b/src/ap/ctrl_iface_ap.c
+@@ -26,7 +26,7 @@
+ #include "taxonomy.h"
+ #include "wnm_ap.h"
+ 
+-#ifdef CONFIG_CTRL_IFACE_MIB
++//#ifdef CONFIG_CTRL_IFACE_MIB
+ 
+ typedef enum {
+ 	BAND_UNII_1 = 1,
+@@ -761,7 +761,7 @@ int hostapd_ctrl_iface_sta_next(struct h
+ 	return hostapd_ctrl_iface_sta_mib(hapd, sta->next, buf, buflen);
+ }
+ 
+-#endif
++//#endif
+ 
+ #ifdef CONFIG_P2P_MANAGER
+ static int p2p_manager_disconnect(struct hostapd_data *hapd, u16 stype,

@@ -1,0 +1,268 @@
+From f0e393952a4641f522e33ece1a4908d89f3d3d75 Mon Sep 17 00:00:00 2001
+From: Sriram R <quic_srirrama@quicinc.com>
+Date: Thu, 10 Nov 2022 07:44:04 +0530
+Subject: [PATCH] hostapd: Send ML IE in non ML probe response
+
+Include MLE in probe responses. If No MLE is present
+in the probe request, non ML probe response is sent which
+carries the basic MLE with common info and no per sta profiles
+as in ML probe response.
+Add basic infra to handle MLE in probe request. Processing
+of the IE and sending ML probe response is done in later
+patch
+
+Signed-off-by: Sriram R <quic_srirrama@quicinc.com>
+---
+ src/ap/beacon.c                | 26 ++++++++++++++++++++------
+ src/ap/ieee802_11.c            | 27 +++++++++++++++++++++++----
+ src/ap/ieee802_11.h            |  8 ++++++--
+ src/common/ieee802_11_common.c |  4 ++++
+ src/common/ieee802_11_common.h | 25 +++++++++++++++++++++++++
+ 5 files changed, 78 insertions(+), 12 deletions(-)
+
+--- a/src/ap/beacon.c
++++ b/src/ap/beacon.c
+@@ -557,7 +557,8 @@ static u8 * hostapd_eid_mbssid_config(st
+ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
+ 				   const struct ieee80211_mgmt *req,
+ 				   int is_p2p, size_t *resp_len,
+-				   const u8 *known_bss, u8 known_bss_len)
++				   const u8 *known_bss, u8 known_bss_len,
++				   struct multi_link_data *ml_data)
+ {
+ 	struct ieee80211_mgmt *resp;
+ 	u8 *pos, *epos, *csa_pos;
+@@ -609,6 +610,8 @@ static u8 * hostapd_gen_probe_resp(struc
+ 	if (hapd->iconf->ieee80211be && !hapd->conf->disable_11be) {
+ 		buflen += hostapd_eid_eht_capab_len(hapd, IEEE80211_MODE_AP);
+ 		buflen += 3 + sizeof(struct ieee80211_eht_operation);
++		buflen += hostapd_eid_basic_mle_len(hapd, WLAN_FC_STYPE_PROBE_RESP,
++						    ml_data);
+ 		if (hapd->iconf->ru_punct_bitmap)
+ 			buflen +=  DISABLED_SUBCHANNEL_BITMAP_BYTES_SIZE;
+ 	}
+@@ -777,6 +780,9 @@ static u8 * hostapd_gen_probe_resp(struc
+ 	if (hapd->iconf->ieee80211be && !hapd->conf->disable_11be) {
+ 		pos = hostapd_eid_eht_capab(hapd, pos, IEEE80211_MODE_AP);
+ 		pos = hostapd_eid_eht_operation(hapd, pos, IEEE80211_MODE_AP);
++		pos = hostapd_eid_basic_mle(hapd, pos,
++					    WLAN_FC_STYPE_PROBE_RESP,
++					    ml_data);
+ 	}
+ #endif /* CONFIG_IEEE80211BE */
+ 
+@@ -1046,6 +1052,9 @@ void handle_probe_req(struct hostapd_dat
+ 	u16 csa_offs[2];
+ 	size_t csa_offs_len;
+ 	struct radius_sta rad_info;
++	struct multi_link_data ml_data;
++
++	os_memset(&ml_data, 0, sizeof(struct multi_link_data));
+ 
+ 	if (hapd->iconf->rssi_ignore_probe_request && ssi_signal &&
+ 	    ssi_signal < hapd->iconf->rssi_ignore_probe_request)
+@@ -1286,12 +1295,17 @@ void handle_probe_req(struct hostapd_dat
+ 	if (hapd != hostapd_mbssid_get_tx_bss(hapd) && res != EXACT_SSID_MATCH)
+ 		return;
+ 
++	if (elems.mle)
++		hostapd_parse_mle(hapd, WLAN_FC_STYPE_PROBE_RESP,
++				  &elems, &ml_data);
++
+ 	wpa_msg_ctrl(hapd->msg_ctx, MSG_INFO, RX_PROBE_REQUEST "sa=" MACSTR
+ 		     " signal=%d", MAC2STR(mgmt->sa), ssi_signal);
+ 
+ 	resp = hostapd_gen_probe_resp(hapd, mgmt, elems.p2p != NULL,
+ 				      &resp_len, elems.mbssid_known_bss,
+-				      elems.mbssid_known_bss_len);
++				      elems.mbssid_known_bss_len,
++				      &ml_data);
+ 	if (resp == NULL)
+ 		return;
+ 
+@@ -1361,7 +1375,7 @@ static u8 * hostapd_probe_resp_offloads(
+ 			   "this");
+ 
+ 	/* Generate a Probe Response template for the non-P2P case */
+-	return hostapd_gen_probe_resp(hapd, NULL, 0, resp_len, NULL, 0);
++	return hostapd_gen_probe_resp(hapd, NULL, 0, resp_len, NULL, 0, NULL);
+ }
+ 
+ #endif /* NEED_AP_MLME */
+@@ -1392,7 +1406,7 @@ static u8 * hostapd_unsol_bcast_probe_re
+ 
+ 	return hostapd_gen_probe_resp(hapd, NULL, 0,
+ 				      &params->unsol_bcast_probe_resp_tmpl_len,
+-				      NULL, 0);
++				      NULL, 0, NULL);
+ }
+ #endif /* CONFIG_IEEE80211AX */
+ 
+@@ -1772,7 +1786,7 @@ int ieee802_11_build_ap_params(struct ho
+ 		tail_len += hostapd_eid_eht_capab_len(hapd, IEEE80211_MODE_AP);
+ 		tail_len += 3 + sizeof(struct ieee80211_eht_operation);
+ 		tail_len += hostapd_eid_basic_mle_len(hapd, WLAN_FC_STYPE_BEACON,
+-						      0);
++						      NULL);
+ 		if (hapd->iconf->ru_punct_bitmap)
+ 			tail_len +=  DISABLED_SUBCHANNEL_BITMAP_BYTES_SIZE;
+ 	}
+@@ -1953,7 +1967,7 @@ int ieee802_11_build_ap_params(struct ho
+ 		tailpos = hostapd_eid_eht_operation(hapd, tailpos, IEEE80211_MODE_AP);
+ 		tailpos = hostapd_eid_basic_mle(hapd, tailpos,
+ 						WLAN_FC_STYPE_BEACON,
+-						0);
++						NULL);
+ 	}
+ #endif /* CONFIG_IEEE80211BE */
+ 
+--- a/src/ap/ieee802_11.c
++++ b/src/ap/ieee802_11.c
+@@ -7122,7 +7122,8 @@ static bool mbssid_known_bss(unsigned in
+ }
+ 
+ 
+-size_t hostapd_eid_basic_mle_len(struct hostapd_data *hapd, u32 type, u16 link_info_bmap)
++size_t hostapd_eid_basic_mle_len(struct hostapd_data *hapd, u32 type,
++				 struct multi_link_data *ml_data)
+ {
+ 	size_t total_len = 0;
+ 
+@@ -7135,7 +7136,7 @@ size_t hostapd_eid_basic_mle_len(struct
+ 
+ 	/* TODO EML caps and Medium Synchronization Delay Info fields */
+ 
+-	if (!link_info_bmap)
++	if (ml_data == NULL || !ml_data->present)
+ 		return total_len;
+ 
+ 	if (type != WLAN_FC_STYPE_PROBE_RESP && type != WLAN_FC_STYPE_ASSOC_RESP) {
+@@ -7150,7 +7151,7 @@ size_t hostapd_eid_basic_mle_len(struct
+ 
+ 
+ u8 * hostapd_eid_basic_mle(struct hostapd_data *hapd, u8 *eid, u32 type,
+-			   u16 link_info_bmap)
++			   struct multi_link_data *ml_data)
+ {
+ 	u8 *eid_len, *eid_cmn_info_len;
+ 	u16 presence_bmap = 0;
+@@ -7193,7 +7194,7 @@ u8 * hostapd_eid_basic_mle(struct hostap
+ 
+ 	*eid_len = eid - eid_len - 1;
+ 
+-	if (!link_info_bmap)
++	if (ml_data == NULL || !ml_data->present)
+ 		return eid;
+ 
+ 	if (type != WLAN_FC_STYPE_PROBE_RESP && type != WLAN_FC_STYPE_ASSOC_RESP) {
+@@ -7208,6 +7209,24 @@ u8 * hostapd_eid_basic_mle(struct hostap
+ 	return eid;
+ }
+ 
++void hostapd_parse_mle(struct hostapd_data *hapd, u32 type,
++		       struct ieee802_11_elems *elems,
++		       struct multi_link_data *ml_data)
++{
++	const u8 *mle;
++
++	if (!elems->mle)
++		return;
++
++	ml_data->present = true;
++
++	mle = elems->mle;
++
++	os_memcpy(&ml_data->control, mle, sizeof(struct multi_link_control));
++
++	/* TODO Parse ML Element based on type and fill ml_data */
++}
++
+ static size_t hostapd_eid_mbssid_elem_len(struct hostapd_data *hapd,
+ 					  u32 frame_type, size_t *bss_index,
+ 					  const u8 *known_bss,
+--- a/src/ap/ieee802_11.h
++++ b/src/ap/ieee802_11.h
+@@ -20,6 +20,7 @@ struct radius_sta;
+ enum ieee80211_op_mode;
+ struct mac_acl_entry;
+ enum oper_chan_width;
++struct multi_link_data;
+ 
+ enum colocation_mode {
+         NO_COLOCATED_6GHZ,
+@@ -233,9 +234,12 @@ u16 copy_sta_eht_capab(struct hostapd_da
+ 		       const u8 *eht_capab, size_t eht_capab_len);
+ void ru_punct_update_bw(u16 bitmap, u8 pri_chan, enum oper_chan_width *width, u8 *seg0, u8 *seg1);
+ size_t hostapd_eid_basic_mle_len(struct hostapd_data *hapd, u32 type,
+-				 u16 link_info_bmap);
++				 struct multi_link_data *ml_data);
+ u8 * hostapd_eid_basic_mle(struct hostapd_data *hapd, u8 *eid,
+-			   u32 type, u16 link_info_bmap);
++			   u32 type, struct multi_link_data *ml_data);
++void hostapd_parse_mle(struct hostapd_data *hapd, u32 type,
++		       struct ieee802_11_elems *elems,
++		       struct multi_link_data *ml_data);
+ size_t hostapd_eid_mbssid_len(struct hostapd_data *hapd, u32 frame_type,
+ 			      u8 *elem_count, const u8 *known_bss,
+ 			      size_t known_bss_len, size_t *rnr_len);
+--- a/src/common/ieee802_11_common.c
++++ b/src/common/ieee802_11_common.c
+@@ -391,6 +391,10 @@ static int ieee802_11_parse_extension(co
+ 		elems->mbssid_known_bss = pos;
+ 		elems->mbssid_known_bss_len = elen;
+ 		break;
++	case WLAN_EID_EXT_MULTI_LINK:
++		elems->mle = pos;
++		elems->mle_len = elen;
++		break;
+ 	default:
+ 		if (show_errors) {
+ 			wpa_printf(MSG_MSGDUMP,
+--- a/src/common/ieee802_11_common.h
++++ b/src/common/ieee802_11_common.h
+@@ -31,6 +31,29 @@ struct mb_ies_info {
+ 	u8 nof_ies;
+ };
+ 
++enum multi_link_elem_type {
++	MULTI_LINK_BASIC,
++	MULTI_LINK_PROBE_REQ,
++	MULTI_LINK_RECONFIG,
++	MULTI_LINK_TDLS,
++	MULTI_LINK_PRIO_ACCESS,
++};
++
++struct multi_link_control {
++	u16 type : 3;
++	u16 reserved : 1;
++	u16 presence : 12;
++};
++
++struct multi_link_data {
++	/* MLE present in the mgmt frame */
++	bool present;
++
++	struct multi_link_control control;
++
++	/* TODO Common and type specific data */
++};
++
+ /* Parsed Information Elements */
+ struct ieee802_11_elems {
+ 	const u8 *ssid;
+@@ -110,6 +133,7 @@ struct ieee802_11_elems {
+ 	const u8 *tdls_mle;
+ 	const u8 *prior_access_mle;
+ 	const u8 *mbssid_known_bss;
++	const u8* mle;
+ 
+ 	u8 ssid_len;
+ 	u8 supp_rates_len;
+@@ -172,6 +196,7 @@ struct ieee802_11_elems {
+ 	size_t tdls_mle_len;
+ 	size_t prior_access_mle_len;
+ 	u8 mbssid_known_bss_len;
++	u8 mle_len;
+ 
+ 	struct mb_ies_info mb_ies;
+ 

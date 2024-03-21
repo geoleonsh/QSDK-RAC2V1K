@@ -1,0 +1,59 @@
+--- a/scripts/netifd-wireless.sh	2023-04-14 17:41:25.291955221 -0700
++++ b/scripts/netifd-wireless.sh	2023-04-14 17:56:57.492076695 -0700
+@@ -209,11 +209,11 @@
+ 	auth_mode_open=1
+ 	auth_mode_shared=0
+ 	auth_type=none
++	wpa=0
++	wpa_cipher=
+ 
+ 	if [ "$hwmode" = "ad" ]; then
+ 		wpa_cipher="GCMP"
+-	else
+-		wpa_cipher="CCMP"
+ 	fi
+ 
+ 	# WPA3 enterprise requires the GCMP-256 cipher (technically also CCMP and GCMP are possible
+@@ -226,14 +226,14 @@
+ 	case "$encryption" in
+ 		*tkip+aes|*tkip+ccmp|*aes+tkip|*ccmp+tkip) wpa_cipher="CCMP TKIP";;
+ 		*ccmp256) wpa_cipher="CCMP-256";;
+-		*aes|*ccmp) wpa_cipher="CCMP";;
+-		*tkip) wpa_cipher="TKIP";;
++		*aes|*ccmp| psk2 | wpa2) wpa_cipher="CCMP";;
++		*tkip | wpa | psk ) wpa_cipher="TKIP";;
+ 		*gcmp256) wpa_cipher="GCMP-256";;
+ 		*gcmp) wpa_cipher="GCMP";;
+ 	esac
+ 
+-	# 802.11n requires CCMP for WPA
+-	[ "$enable_ht:$wpa_cipher" = "1:TKIP" ] && wpa_cipher="CCMP TKIP"
++	# Standlone TKIP is no longer allowed
++	[ "$wpa_cipher" = "TKIP" ] && wpa_cipher="CCMP TKIP"
+ 
+ 	# Examples:
+ 	# psk-mixed/tkip    => WPA1+2 PSK, TKIP
+@@ -241,6 +241,10 @@
+ 	# wpa2/tkip+aes     => WPA2 RADIUS, CCMP+TKIP
+ 
+ 	case "$encryption" in
++		none)
++			wpa=0
++			wpa_cipher=
++		;;
+ 		wpa2*|wpa3*|*psk2*|psk3*|sae*|owe*)
+ 			wpa=2
+ 		;;
+@@ -251,8 +255,10 @@
+ 			wpa=1
+ 		;;
+ 		*)
+-			wpa=0
+-			wpa_cipher=
++			# TKIP alone is now prohibited by WFA so the only
++			# combination left must be CCMP+TKIP (wpa=3)
++			wpa=3
++			wpa_cipher="CCMP TKIP"
+ 		;;
+ 	esac
+ 	wpa_pairwise="$wpa_cipher"

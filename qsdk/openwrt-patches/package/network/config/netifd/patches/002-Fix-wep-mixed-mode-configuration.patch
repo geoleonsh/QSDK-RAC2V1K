@@ -1,0 +1,11 @@
+--- a/scripts/netifd-wireless.sh
++++ b/scripts/netifd-wireless.sh
+@@ -281,6 +281,8 @@ wireless_vif_parse_encryption() {
+ 		;;
+ 		*wep*)
+ 			auth_type=wep
++			wpa=0
++			wpa_pairwise=
+ 			case "$encryption" in
+ 				*shared*)
+ 					auth_mode_open=0

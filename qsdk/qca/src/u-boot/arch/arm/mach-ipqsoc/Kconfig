@@ -1,0 +1,148 @@
+if ARCH_IPQSOC
+
+config ARCH_32BIT_SUPPORT
+	bool "IPQSOC 32-bit support"
+	select CPU_V7A
+	default n
+
+config ARCH_64BIT_SUPPORT
+	bool "IPQSOC 64-bit support"
+	select ARM64
+	default n
+
+config SYS_SOC
+	default "ipqsoc"
+
+config SMEM_VERSION_C
+	bool "IPQSOC Shared memory version"
+	default n
+
+config SMEM_BASE_ADDR
+	hex "Define memory for shared memory"
+
+config NUM_ALT_PARTITION
+	int
+	default 16
+
+config RAM_NUM_PART_ENTRIES
+	int "Number of RAM partition entries which are usable by APPS"
+	default 32
+
+config SCM
+	bool "add scm call support"
+
+config RAM_PART_NAME_LENGTH
+	int "Max length of ram partition name"
+	default 16
+
+config TEXT_SIZE
+	hex "Define Size of u-boot text size in DDR region"
+	default 0x100000
+
+config IPQ_SPI_NOR
+	bool "Enable SPI NOR flash support in IPQ SOC"
+	select DMA
+	select DMA_CHANNELS
+	select BAM_DMA
+	select SPI
+	select DM_SPI
+	select DM_SPI_FLASH
+	select SPI_QUP
+	select SPI_FLASH_STMICRO
+	select SPI_FLASH_GIGADEVICE
+	select SPI_FLASH_MACRONIX
+
+config IPQ_SPI_NOR_DEV_NAME
+	string "IPQ SPI NOR boot device name"
+
+config ETH_MAX_MAC
+	hex "Define Maximum MAC support in SoC"
+	default 2
+
+choice
+	prompt "IPQ board select"
+
+config TARGET_IPQ5332
+	bool "QTI IPQ5332 SOC"
+	select BOARD_LATE_INIT
+	select SMEM_VERSION_C
+	select OF_BOARD_SETUP
+	select PINCTRL_QTI
+	select CLK_QTI
+	select SCM
+	select SYS_DEVICE_NULLDEV
+	select CMD_XIMG
+	select CMD_MEMTEST
+	select CMD_CACHE
+	select ENV_IS_NOWHERE
+	select SYS_ARCH_TIMER if CPU_V7A
+	select PHYLIB
+	select DM_MDIO
+	select MDIO_IPQ4019
+	select CMD_MDIO
+	select CMD_MII
+	select CMD_NET
+	select PHY_QTI
+	select CMD_TFTPPUT
+	select ETH
+	select CMD_PING
+	select QTI_NSS_SWITCH
+	select TFTP_PORT
+	select CMD_DHCP
+	select PHY_QTI_8X8X
+	select PHY_QTI_8081
+	help
+	  Support for the IPQ53XX SoC.
+	  - Board Open Platform Specifications.
+	  - Quad Cores A53, Nom@1.2G ,Turbo@1.5G, L1@32KB L2@512KB
+	  - DDR3L/DDR4
+	  - QSPI NAND / NOR / eMMC
+	  - USB 3.0/I2C/UART/PCIe Gen3 2Lane
+	  - 1G/2.5G/10G Ethernet Ports
+
+config TARGET_IPQ9574
+	bool "QTI IPQ9574 SOC"
+	select BOARD_LATE_INIT
+	select SMEM_VERSION_C
+	select OF_BOARD_SETUP
+	select PINCTRL_QTI
+	select CLK_QTI
+	select SCM
+	select SYS_DEVICE_NULLDEV
+	select CMD_XIMG
+	select CMD_MEMTEST
+	select CMD_CACHE
+	select ENV_IS_NOWHERE
+	select SYS_ARCH_TIMER if CPU_V7A
+	select PHYLIB
+	select DM_MDIO
+	select MDIO_IPQ4019
+	select CMD_MDIO
+	select CMD_MII
+	select CMD_NET
+	select PHY_QTI
+	select CMD_TFTPPUT
+	select ETH
+	select CMD_PING
+	select QTI_NSS_SWITCH
+	select TFTP_PORT
+	select CMD_DHCP
+	select PHY_QTI_8075
+	select PHY_QTI_8X8X
+	select PHY_QTI_8081
+	select PHY_AQUANTIA
+	help
+	  Support for IPQ95xx SoC.
+	  - Board Open Platform Specifications.
+	  - Quad Cores A73, max@2.2G, L1@32KB L2@512KB
+	  - DDR3L/DDR4
+	  - QSPI NAND / NOR / eMMC
+	  - USB 3.0/I2C/UART/PCIe Gen3 2Lane
+	  - 1G/2.5G/10G Ethernet Ports
+
+endchoice
+
+source "board/qti/ipq5332/Kconfig"
+source "board/qti/ipq9574/Kconfig"
+
+endif

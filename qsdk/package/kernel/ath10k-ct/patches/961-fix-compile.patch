@@ -1,0 +1,103 @@
+--- a/ath10k-5.15/mac.c
++++ b/ath10k-5.15/mac.c
+@@ -2304,8 +2304,8 @@ static void ath10k_mac_vif_ap_csa_count_
+ 	if (!arvif->is_up)
+ 		return;
+ 
+-	if (!ieee80211_beacon_cntdwn_is_complete(vif)) {
+-		ieee80211_beacon_update_cntdwn(vif);
++	if (!ieee80211_beacon_cntdwn_is_complete(vif, 0)) {
++		ieee80211_beacon_update_cntdwn(vif, 0);
+ 
+ 		ret = ath10k_mac_setup_bcn_tmpl(arvif);
+ 		if (ret)
+@@ -2317,7 +2317,7 @@ static void ath10k_mac_vif_ap_csa_count_
+ 			ath10k_warn(ar, "failed to update prb tmpl during csa: %d\n",
+ 				    ret);
+ 	} else {
+-		ieee80211_csa_finish(vif);
++		ieee80211_csa_finish(vif, 0);
+ 	}
+ }
+ 
+@@ -8918,7 +8918,7 @@ static int ath10k_cancel_remain_on_chann
+  * in ath10k, but device-specific in mac80211.
+  */
+ 
+-static int ath10k_set_rts_threshold(struct ieee80211_hw *hw, u32 value)
++static int ath10k_set_rts_threshold(struct ieee80211_hw *hw, u32 value, struct ieee80211_vif *vif, int bba)
+ {
+ 	struct ath10k *ar = hw->priv;
+ 	struct ath10k_vif *arvif;
+@@ -9389,6 +9389,7 @@ static void ath10k_dbg_print_bitrate_mas
+ 
+ static int ath10k_mac_op_set_bitrate_mask(struct ieee80211_hw *hw,
+ 					  struct ieee80211_vif *vif,
++                                          unsigned int bba,
+ 					  const struct cfg80211_bitrate_mask *mask)
+ {
+ 	struct ath10k_vif *arvif = (void *)vif->drv_priv;
+@@ -9520,7 +9521,7 @@ exit:
+ static void ath10k_sta_rc_update(struct ieee80211_hw *hw,
+ 				 struct ieee80211_vif *vif,
+ 				 struct ieee80211_sta *sta,
+-				 u32 changed)
++				 u32 changed, u8 bba)
+ {
+ 	struct ath10k *ar = hw->priv;
+ 	struct ath10k_sta *arsta = (struct ath10k_sta *)sta->drv_priv;
+--- a/ath10k-5.15/testmode.h
++++ b/ath10k-5.15/testmode.h
+@@ -11,7 +11,7 @@ void ath10k_testmode_destroy(struct ath1
+ 
+ bool ath10k_tm_event_wmi(struct ath10k *ar, u32 cmd_id, struct sk_buff *skb);
+ int ath10k_tm_cmd(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
+-		  void *data, int len);
++		  u8 bba, void *data, int len);
+ 
+ #else
+ 
+@@ -27,7 +27,7 @@ static inline bool ath10k_tm_event_wmi(s
+ 
+ static inline int ath10k_tm_cmd(struct ieee80211_hw *hw,
+ 				struct ieee80211_vif *vif,
+-				void *data, int len)
++				u8 bba, void *data, int len)
+ {
+ 	return 0;
+ }
+--- a/ath10k-5.15/core.c
++++ b/ath10k-5.15/core.c
+@@ -4151,7 +4151,7 @@ static int ath10k_core_probe_fw(struct a
+ 		ath10k_debug_print_board_info(ar);
+ 	}
+ 
+-	device_get_mac_address(ar->dev, ar->mac_addr);
++	device_get_mac_address(ar->dev, ar->mac_addr, 6);
+ 
+ 	/* Try to get mac address from device node (from nvmem cell) */
+ 	of_get_mac_address(ar->dev->of_node, ar->mac_addr);
+--- a/ath10k-5.15/wmi.c
++++ b/ath10k-5.15/wmi.c
+@@ -4259,8 +4259,8 @@ void ath10k_wmi_event_host_swba(struct a
+ 		 * actual channel switch is done
+ 		 */
+ 		if (arvif->vif->bss_conf.csa_active &&
+-		    ieee80211_beacon_cntdwn_is_complete(arvif->vif)) {
+-			ieee80211_csa_finish(arvif->vif);
++		    ieee80211_beacon_cntdwn_is_complete(arvif->vif, 0)) {
++			ieee80211_csa_finish(arvif->vif, 0);
+ 			continue;
+ 		}
+ 
+--- a/ath10k-5.15/pci.c
++++ b/ath10k-5.15/pci.c
+@@ -3563,7 +3563,7 @@ static void ath10k_pci_free_irq(struct a
+ 
+ void ath10k_pci_init_napi(struct ath10k *ar)
+ {
+-	netif_napi_add(&ar->napi_dev, &ar->napi, ath10k_pci_napi_poll);
++	netif_napi_add(&ar->napi_dev, &ar->napi, ath10k_pci_napi_poll, 0);
+ }
+ 
+ static int ath10k_pci_init_irq(struct ath10k *ar)

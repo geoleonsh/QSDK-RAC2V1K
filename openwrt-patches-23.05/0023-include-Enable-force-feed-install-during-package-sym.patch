@@ -1,0 +1,36 @@
+From 5b36ecbc9ace699d12bc3b749688d1b49fe065dd Mon Sep 17 00:00:00 2001
+From: Ermine Jose <quic_erminejo@quicinc.com>
+Date: Thu, 2 Mar 2023 13:11:54 +0530
+Subject: [PATCH] include: Enable force feed install during package/symlinks
+
+If a package exists in feed as well as in core openwrt package,
+then openwrt core package will be overridden by feeds' package
+
+Change-Id: I482a74889bb56790a80c13d9f3c850f294391ddd
+Signed-off-by: Ermine Jose <quic_erminejo@quicinc.com>
+---
+ include/toplevel.mk | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/include/toplevel.mk b/include/toplevel.mk
+index 2fda7ed22392..131618ef8427 100644
+--- a/include/toplevel.mk
++++ b/include/toplevel.mk
+@@ -244,12 +244,12 @@ endif
+ # update all feeds, re-create index files, install symlinks
+ package/symlinks:
+ 	./scripts/feeds update -a
+-	./scripts/feeds install -a
++	./scripts/feeds install -a -f
+ 
+ # re-create index files, install symlinks
+ package/symlinks-install:
+ 	./scripts/feeds update -i
+-	./scripts/feeds install -a
++	./scripts/feeds install -a -f
+ 
+ # remove all symlinks, don't touch ./feeds
+ package/symlinks-clean:
+-- 
+2.34.1
+

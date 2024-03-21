@@ -1,0 +1,34 @@
+--- a/scripts/netifd-wireless.sh
++++ b/scripts/netifd-wireless.sh
+@@ -232,9 +232,6 @@ wireless_vif_parse_encryption() {
+ 		*gcmp) wpa_cipher="GCMP";;
+ 	esac
+ 
+-	# Standlone TKIP is no longer allowed
+-	[ "$wpa_cipher" = "TKIP" ] && wpa_cipher="CCMP TKIP"
+-
+ 	# Examples:
+ 	# psk-mixed/tkip    => WPA1+2 PSK, TKIP
+ 	# wpa-psk2/tkip+aes => WPA2 PSK, CCMP+TKIP
+@@ -255,12 +252,17 @@ wireless_vif_parse_encryption() {
+ 			wpa=1
+ 		;;
+ 		*)
+-			# TKIP alone is now prohibited by WFA so the only
+-			# combination left must be CCMP+TKIP (wpa=3)
+-			wpa=3
+-			wpa_cipher="CCMP TKIP"
++			wpa=0
++			wpa_cipher=
+ 		;;
+ 	esac
++	# Standlone TKIP is no longer allowed
++	# TKIP alone is now prohibited by WFA so the only
++	# combination left must be CCMP+TKIP (wpa=3)
++	[ "$wpa_cipher" = "TKIP" ] && {
++		wpa=3
++		wpa_cipher="CCMP TKIP"
++	}
+ 	wpa_pairwise="$wpa_cipher"
+ 
+ 	case "$encryption" in

@@ -1,0 +1,28 @@
+From 9226fd1d85dce96123e6311aa530d461dadb73e8 Mon Sep 17 00:00:00 2001
+From: Ken Zhu <quic_guigenz@quicinc.com>
+Date: Wed, 3 May 2023 11:03:22 -0700
+Subject: [PATCH] netfilter: ipt-ipopt adds dependency on nf_conntrack
+
+ipt-ipopt depends on nf_conntrack.
+
+Change-Id: I307ebde20340a7c5fc222fd7df5441416eb7dc94
+Signed-off-by: Ken Zhu <quic_guigenz@quicinc.com>
+---
+ package/kernel/linux/modules/netfilter.mk | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/package/kernel/linux/modules/netfilter.mk b/package/kernel/linux/modules/netfilter.mk
+index 7cfbecd949cf..e648cc21c955 100644
+--- a/package/kernel/linux/modules/netfilter.mk
++++ b/package/kernel/linux/modules/netfilter.mk
+@@ -311,6 +311,7 @@ $(eval $(call KernelPackage,ipt-offload))
+ 
+ define KernelPackage/ipt-ipopt
+   TITLE:=Modules for matching/changing IP packet options
++  DEPENDS:=+kmod-nf-conntrack
+   KCONFIG:=$(KCONFIG_IPT_IPOPT)
+   FILES:=$(foreach mod,$(IPT_IPOPT-m),$(LINUX_DIR)/net/$(mod).ko)
+   AUTOLOAD:=$(call AutoProbe,$(notdir $(IPT_IPOPT-m)))
+-- 
+2.34.1
+

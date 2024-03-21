@@ -1,0 +1,61 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+* Copyright (c) 2023, Qualcomm Innovation Center, Inc. All rights reserved.
+*/
+
+#include "ipq9574-rdp433.dts"
+
+/ {
+	config_name = "config@al02-c7", "config@rdp433-mht-phy", "config-rdp433-mht-phy";
+
+};
+
+&phy_rst_pinmux {
+	/delete-node/ qti_8085_rst;
+
+	qti_8x8x_rst {
+		pins = "GPIO_60";
+		drive-strength = <DRIVE_STRENGTH_8MA>;
+		bias-pull-up;
+	};
+};
+
+/delete-node/ &phy0;
+/delete-node/ &phy1;
+/delete-node/ &phy2;
+/delete-node/ &phy3;
+
+&mdio {
+	phy0: phy@1 {
+		phy-reset-gpio = <&tlmm 60 0>;
+		reg = <1>;
+		phy_id = <8>;
+		id = <1>;
+		uniphy_id = <0>;
+		uniphy_type = <0>;
+	};
+
+	phy1: phy@2 {
+		reg = <2>;
+		phy_id = <8>;
+		id = <2>;
+		uniphy_id = <0>;
+		uniphy_type = <0>;
+	};
+
+	phy2: phy@3 {
+		reg = <3>;
+		phy_id = <8>;
+		id = <3>;
+		uniphy_id = <0>;
+		uniphy_type = <0>;
+	};
+
+	phy3: phy@4 {
+		reg = <4>;
+		phy_id = <8>;
+		id = <4>;
+		uniphy_id = <0>;
+		uniphy_type = <0>;
+	};
+};

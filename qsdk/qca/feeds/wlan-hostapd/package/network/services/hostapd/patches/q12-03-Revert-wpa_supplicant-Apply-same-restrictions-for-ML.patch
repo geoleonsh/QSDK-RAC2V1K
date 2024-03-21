@@ -1,0 +1,82 @@
+From 8c1dab3e5db6d925d6ada5f1da051e4b60dbf95c Mon Sep 17 00:00:00 2001
+From: Wen Gong <quic_wgong@quicinc.com>
+Date: Mon, 27 Feb 2023 23:05:45 -0500
+Subject: [PATCH 2/9] Revert "wpa_supplicant: Apply same restrictions for MLD
+ as for 6 GHz BSS"
+
+This reverts commit https://w1.fi/cgit/hostap/commit/?id=7d8b96dcfdbb61b23c868b817f253fa5b965e0d2
+
+
+Signed-off-by: Wen Gong <quic_wgong@quicinc.com>
+Signed-off-by: Amutha Ravikumar <quic_aravikum@quicinc.com>
+---
+ wpa_supplicant/events.c | 17 ++++++++---------
+ 1 file changed, 8 insertions(+), 9 deletions(-)
+
+diff --git a/wpa_supplicant/events.c b/wpa_supplicant/events.c
+index 8f0ed2033..59e621d8d 100644
+--- a/wpa_supplicant/events.c
++++ b/wpa_supplicant/events.c
+@@ -610,8 +610,7 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_supplicant *wpa_s,
+ #ifdef CONFIG_WEP
+ 	int wep_ok;
+ #endif /* CONFIG_WEP */
+-	bool is_6ghz_bss_or_mld = is_6ghz_freq(bss->freq) ||
+-		!is_zero_ether_addr(bss->mld_addr);
++	bool is_6ghz_bss = is_6ghz_freq(bss->freq);
+ 
+ 	ret = wpas_wps_ssid_bss_match(wpa_s, ssid, bss);
+ 	if (ret >= 0)
+@@ -626,10 +625,10 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_supplicant *wpa_s,
+ #endif /* CONFIG_WEP */
+ 
+ 	rsn_ie = wpa_bss_get_ie(bss, WLAN_EID_RSN);
+-	if (is_6ghz_bss_or_mld && !rsn_ie) {
++	if (is_6ghz_bss && !rsn_ie) {
+ 		if (debug_print)
+ 			wpa_dbg(wpa_s, MSG_DEBUG,
+-				"   skip - 6 GHz/MLD BSS without RSNE");
++				"   skip - 6 GHz BSS without RSNE");
+ 		return 0;
+ 	}
+ 
+@@ -647,7 +646,7 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_supplicant *wpa_s,
+ 		if (!ie.has_group)
+ 			ie.group_cipher = wpa_default_rsn_cipher(bss->freq);
+ 
+-		if (is_6ghz_bss_or_mld) {
++		if (is_6ghz_bss) {
+ 			/* WEP and TKIP are not allowed on 6 GHz */
+ 			ie.pairwise_cipher &= ~(WPA_CIPHER_WEP40 |
+ 						WPA_CIPHER_WEP104 |
+@@ -698,12 +697,12 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_supplicant *wpa_s,
+ 			break;
+ 		}
+ 
+-		if (is_6ghz_bss_or_mld) {
++		if (is_6ghz_bss) {
+ 			/* MFPC must be supported on 6 GHz */
+ 			if (!(ie.capabilities & WPA_CAPABILITY_MFPC)) {
+ 				if (debug_print)
+ 					wpa_dbg(wpa_s, MSG_DEBUG,
+-						"   skip RSNE - 6 GHz/MLD without MFPC");
++						"   skip RSNE - 6 GHz without MFPC");
+ 				break;
+ 			}
+ 
+@@ -743,10 +742,10 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_supplicant *wpa_s,
+ 		return 1;
+ 	}
+ 
+-	if (is_6ghz_bss_or_mld) {
++	if (is_6ghz_bss) {
+ 		if (debug_print)
+ 			wpa_dbg(wpa_s, MSG_DEBUG,
+-				"   skip - 6 GHz/MLD BSS without matching RSNE");
++				"   skip - 6 GHz BSS without matching RSNE");
+ 		return 0;
+ 	}
+ 
+-- 
+2.25.1
+

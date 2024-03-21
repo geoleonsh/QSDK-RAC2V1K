@@ -1,0 +1,39 @@
+From fa8c2249c9a7c4096e234de2693fe798cdec886f Mon Sep 17 00:00:00 2001
+From: Ken Zhu <guigenz@codeaurora.org>
+Date: Mon, 10 Dec 2018 11:57:52 -0800
+Subject: [PATCH] 464xlat: disable restart when it fails to generate ipv6
+ address
+
+Disable the restart of the 464xlat network when it fails to generate
+the ipv6 address
+
+Change-Id: I2dc2b89809a5dfeef6607e2eaa1d2e99bf7ce6e0
+Signed-off-by: Ken Zhu <guigenz@codeaurora.org>
+---
+ package/network/ipv6/464xlat/files/464xlat.sh | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/package/network/ipv6/464xlat/files/464xlat.sh b/package/network/ipv6/464xlat/files/464xlat.sh
+index dbe38b3cacfd..cceee85709e4 100755
+--- a/package/network/ipv6/464xlat/files/464xlat.sh
++++ b/package/network/ipv6/464xlat/files/464xlat.sh
+@@ -27,7 +27,7 @@ proto_464xlat_setup() {
+ 	local ip6addr ip6prefix tunlink zone
+ 	json_get_vars ip6addr ip6prefix tunlink zone
+ 
+-	[ "$zone" = "-" ] && zone=""
++	[ -z "$zone" ] && zone="wan"
+ 
+ 	( proto_add_host_dependency "$cfg" "::" "$tunlink" )
+ 
+@@ -40,6 +40,7 @@ proto_464xlat_setup() {
+ 	ip6addr=$(464xlatcfg "$link" "$tundev" "$ip6prefix" 192.0.0.1 $ip6addr)
+ 	if [ -z "$ip6addr" ]; then
+ 		proto_notify_error "$cfg" "CLAT_CONFIG_FAILED"
++		proto_block_restart "$cfg"
+ 		return
+ 	fi
+ 
+-- 
+2.34.1
+

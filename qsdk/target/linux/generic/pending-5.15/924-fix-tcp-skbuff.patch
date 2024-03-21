@@ -1,0 +1,24 @@
+--- a/include/linux/tcp.h
++++ b/include/linux/tcp.h
+@@ -51,6 +51,21 @@ static inline unsigned int tcp_optlen(co
+ 	return (tcp_hdr(skb)->doff - 5) * 4;
+ }
+ 
++/**
++ * skb_tcp_all_headers - Returns size of all headers for a TCP packet
++ * @skb: buffer
++ *
++ * Used in TX path, for a packet known to be a TCP one.
++ *
++ * if (skb_is_gso(skb)) {
++ *         int hlen = skb_tcp_all_headers(skb);
++ *         ...
++ */
++static inline int skb_tcp_all_headers(const struct sk_buff *skb)
++{
++	return skb_transport_offset(skb) + tcp_hdrlen(skb);
++}
++
+ /* TCP Fast Open */
+ #define TCP_FASTOPEN_COOKIE_MIN	4	/* Min Fast Open Cookie size in bytes */
+ #define TCP_FASTOPEN_COOKIE_MAX	16	/* Max Fast Open Cookie size in bytes */

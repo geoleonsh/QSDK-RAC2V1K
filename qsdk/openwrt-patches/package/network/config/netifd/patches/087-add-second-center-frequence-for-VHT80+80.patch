@@ -1,0 +1,20 @@
+--- a/scripts/netifd-wireless.sh	2023-04-14 18:09:16.597854113 -0700
++++ b/scripts/netifd-wireless.sh	2023-04-14 19:51:39.221775486 -0700
+@@ -39,7 +39,7 @@
+ }
+ 
+ _wdev_prepare_channel() {
+-	json_get_vars channel band hwmode
++	json_get_vars channel band hwmode cfreq2
+ 
+ 	auto_channel=0
+ 	enable_ht=0
+@@ -393,7 +393,7 @@
+ }
+ 
+ _wdev_common_device_config() {
+-	config_add_string channel hwmode band htmode noscan
++	config_add_string channel hwmode band htmode noscan cfreq2
+ }
+ 
+ _wdev_common_iface_config() {

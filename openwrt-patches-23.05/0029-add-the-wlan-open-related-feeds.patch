@@ -1,0 +1,29 @@
+From b8e0ca365bca0293858c3a5d8c35d8d3cecee410 Mon Sep 17 00:00:00 2001
+From: Arulanbu Balusamy <quic_abalusam@quicinc.com>
+Date: Sun, 18 Jun 2023 12:30:16 +0530
+Subject: [PATCH] add the wlan-open related feeds
+
+added the feeds for wlan_open,wlan_hostapd,wlan_iw and sigma_dut_open
+in the feeds.conf
+
+Change-Id: I6a78914a49573a2aca6368728b02a20b6e2dd7e4
+Signed-off-by: Arulanbu Balusamy <quic_abalusam@quicinc.com>
+---
+ feeds.conf | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/feeds.conf b/feeds.conf
+index 367b0da00edc..34d93ed0927c 100644
+--- a/feeds.conf
++++ b/feeds.conf
+@@ -19,3 +19,7 @@ src-link wapid ../qca/feeds/wapid
+ src-link qca_wapi ../qca/feeds/qca-wapi
+ src-link wlan_utils ../qca/feeds/wlan_utils
+ src-link qca_mcs ../qca/feeds/qca-mcs
++src-link wlan_open ../qca/feeds/wlan-open
++src-link wlan_hostapd ../qca/feeds/wlan-hostapd
++src-link wlan_iw ../qca/feeds/wlan-iw
++src-link sigma_dut_open ../qca/feeds/sigma-dut-open
+-- 
+2.34.1
+

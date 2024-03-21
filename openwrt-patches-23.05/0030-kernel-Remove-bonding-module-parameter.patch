@@ -1,0 +1,28 @@
+From 0f9326ececb8f0661e58d79a384f9c1521f586c4 Mon Sep 17 00:00:00 2001
+From: Murat Sezgin <quic_msezgin@quicinc.com>
+Date: Thu, 22 Jun 2023 16:55:42 -0700
+Subject: [PATCH] kernel: Remove bonding module parameter
+
+Enable bringing up the bonding interface during the boot.
+
+Change-Id: Ia57a3544d3b2a5608d217afb394d1e88bf4607b5
+Signed-off-by: Murat Sezgin <quic_msezgin@quicinc.com>
+---
+ package/kernel/linux/modules/netsupport.mk | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/package/kernel/linux/modules/netsupport.mk b/package/kernel/linux/modules/netsupport.mk
+index e02d9041ad70..eedb0e5c3971 100644
+--- a/package/kernel/linux/modules/netsupport.mk
++++ b/package/kernel/linux/modules/netsupport.mk
+@@ -49,7 +49,6 @@ define KernelPackage/bonding
+   DEPENDS:=PACKAGE_kmod-tls:kmod-tls
+   FILES:=$(LINUX_DIR)/drivers/net/bonding/bonding.ko
+   AUTOLOAD:=$(call AutoLoad,40,bonding)
+-  MODPARAMS.bonding:=max_bonds=0
+ endef
+ 
+ define KernelPackage/bonding/description
+-- 
+2.34.1
+

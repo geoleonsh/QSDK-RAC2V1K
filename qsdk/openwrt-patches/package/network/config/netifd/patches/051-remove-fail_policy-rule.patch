@@ -1,0 +1,12 @@
+diff -Nur -X patern.txt a/interface-ip.c b/interface-ip.c
+--- a/interface-ip.c	2022-08-25 12:13:35.000000000 -0700
++++ b/interface-ip.c	2023-04-18 11:00:24.904498129 -0700
+@@ -1745,8 +1745,6 @@
+ 	    ip->iface->l3_dev.dev) {
+ 		if (ip->iface->l3_dev.dev->settings.ipv6) {
+ 			set_ip_lo_policy(enabled, true, ip->iface);
+-			set_ip_source_policy(enabled, true, IPRULE_PRIORITY_REJECT + ip->iface->l3_dev.dev->ifindex,
+-					     NULL, 0, 0, ip->iface, "failed_policy", true);
+ 		}
+ 		set_ip_lo_policy(enabled, false, ip->iface);
+ 

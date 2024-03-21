@@ -1,0 +1,110 @@
+diff -Nur -X patern.txt a/system-dummy.c b/system-dummy.c
+--- a/system-dummy.c	2022-08-25 12:13:35.000000000 -0700
++++ b/system-dummy.c	2023-04-18 10:38:03.571601332 -0700
+@@ -345,6 +345,11 @@
+ 	return 0;
+ }
+ 
++int system_update_ipv4_mtu(struct device *dev, int mtu)
++{
++	return 0;
++}
++
+ int system_update_ipv6_mtu(struct device *dev, int mtu)
+ {
+ 	return 0;
+diff -Nur -X patern.txt a/system.h b/system.h
+--- a/system.h	2023-04-14 20:54:41.769311010 -0700
++++ b/system.h	2023-04-18 10:38:03.571601332 -0700
+@@ -379,6 +379,8 @@
+ 
+ void system_fd_set_cloexec(int fd);
+ 
++int system_update_ipv4_mtu(struct device *device, int mtu);
++
+ int system_update_ipv6_mtu(struct device *dev, int mtu);
+ 
+ int system_link_netns_move(struct device *dev, const pid_t target_ns, const char *target_ifname);
+diff -Nur -X patern.txt a/system-linux.c b/system-linux.c
+--- a/system-linux.c	2023-04-18 10:32:28.274375681 -0700
++++ b/system-linux.c	2023-04-18 10:53:31.791916921 -0700
+@@ -868,6 +868,13 @@
+ 	int ret;
+ 
+ retry:
++	if (bridge->settings.flags & DEV_OPT_MTU) {
++		system_update_ipv4_mtu(dev, bridge->settings.mtu);
++	}
++	if (bridge->settings.flags & DEV_OPT_MTU6) {
++		system_update_ipv6_mtu(dev, bridge->settings.mtu6);
++	}
++
+ 	ret = 0;
+ 	oldbr = system_get_bridge(dev->ifname, dev_buf, sizeof(dev_buf));
+ 	if (!oldbr || strcmp(oldbr, bridge->ifname) != 0) {
+@@ -1686,10 +1693,9 @@
+ 	memset(&ifr, 0, sizeof(ifr));
+ 	strncpy(ifr.ifr_name, dev->ifname, sizeof(ifr.ifr_name) - 1);
+ 
+-	if (ioctl(sock_ioctl, SIOCGIFMTU, &ifr) == 0) {
+-		s->mtu = ifr.ifr_mtu;
++	s->mtu = system_update_ipv4_mtu(dev, 0);
++	if (s->mtu > 0)
+ 		s->flags |= DEV_OPT_MTU;
+-	}
+ 
+ 	s->mtu6 = system_update_ipv6_mtu(dev, 0);
+ 	if (s->mtu6 > 0)
+@@ -1815,8 +1821,7 @@
+ 	memset(&ifr, 0, sizeof(ifr));
+ 	strncpy(ifr.ifr_name, dev->ifname, sizeof(ifr.ifr_name) - 1);
+ 	if (apply_mask & DEV_OPT_MTU) {
+-		ifr.ifr_mtu = s->mtu;
+-		if (ioctl(sock_ioctl, SIOCSIFMTU, &ifr) < 0)
++		if (system_update_ipv4_mtu(dev, s->mtu) < 0)
+ 			s->flags &= ~DEV_OPT_MTU;
+ 	}
+ 	if (apply_mask & DEV_OPT_MTU6) {
+@@ -3947,12 +3952,42 @@
+ 	return system_link_del(dev->ifname);
+ }
+ 
++int system_update_ipv4_mtu(struct device *dev, int mtu)
++{
++	int ret = -1;
++	struct ifreq ifr;
++
++	if(!dev)
++		return ret;
++
++	memset(&ifr, 0, sizeof(ifr));
++	ifr.ifr_addr.sa_family = AF_INET;
++	strncpy(ifr.ifr_name, dev->ifname, sizeof(ifr.ifr_name));
++
++	if (!mtu) {
++		ret = ioctl(sock_ioctl, SIOCGIFMTU, &ifr);
++		if (ret == 0)
++			ret = ifr.ifr_mtu;
++	} else {
++		struct device * parent = system_if_get_parent(dev);
++		if (parent)
++			system_update_ipv4_mtu(parent, mtu);
++
++		ifr.ifr_mtu = mtu;
++		ret = ioctl(sock_ioctl, SIOCSIFMTU, &ifr);
++	}
++	return (ret == 0) ? mtu : ret;
++}
++
+ int system_update_ipv6_mtu(struct device *dev, int mtu)
+ {
+ 	int ret = -1;
+ 	char buf[64];
+ 	int fd;
+ 
++	if(!dev)
++		return ret;
++
+ 	fd = open(dev_sysctl_path("ipv6/conf", dev->ifname, "mtu"), O_RDWR);
+ 	if (fd < 0)
+ 		return ret;

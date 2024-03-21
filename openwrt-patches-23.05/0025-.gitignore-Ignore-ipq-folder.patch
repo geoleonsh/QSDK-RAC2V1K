@@ -1,0 +1,41 @@
+From fa0f88c6802c3107b20e51e1ae3027b52c96f02a Mon Sep 17 00:00:00 2001
+From: Ram Chandra Jangir <quic_rjangir@quicinc.com>
+Date: Fri, 2 Jun 2023 17:53:53 +0530
+Subject: [PATCH] .gitignore: Ignore ipq folder
+
+Since ipq directory will have ipq projects sources, so
+it should get ignored in openwrt projects
+
+Change-Id: If7cea32e929850855a3bb1475a593a9aacf56a3f
+Signed-off-by: Ram Chandra Jangir <quic_rjangir@quicinc.com>
+---
+ .gitignore | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/.gitignore b/.gitignore
+index a80cdbbea310..100acf85195f 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -14,12 +14,19 @@
+ /feeds
+ /feeds.conf
+ /files
++/ipq-scripts
++/openwrt-patches
+ /overlay
+ /package/feeds
+ /package/openwrt-packages
+ /*.patch
+ /llvm-bpf*
+ key-build*
++/qca
++/qsdk-package
++scripts/fossid-exclude-pattern
++scripts/fossid.sh
++/target/linux/feeds
+ *.orig
+ *.rej
+ *~
+-- 
+2.34.1
+

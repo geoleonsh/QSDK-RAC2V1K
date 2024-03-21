@@ -1,0 +1,103 @@
+From b3e6fc7b0f4e0142ae740e598b7a7e6076f475e5 Mon Sep 17 00:00:00 2001
+From: Atchaya R <quic_ratchaya@quicinc.com>
+Date: Thu, 23 Mar 2023 16:54:53 +0530
+Subject: [PATCH 01/12] verbose.mk: add V=e option to show start and stop for
+ tasks
+
+Sometimes when running multiple jobs in parallel one of them will
+fail and it's difficult to determine which one. This adds a new
+V=e option to track when a job starts and stops. You can invoke
+via:
+
+ $ make -j24 V=e
+
+You can run something like this now to see when each task begins
+and completes:
+ $ make -j24 V=e toolchain/uClibc/compile | awk '{ print strftime("%H:%M:%S"), $0; }'
+
+without this change, for target/linux/prereq, SUCCESS_MESSAGE
+definition is not available leading to compilation issue
+when we make V=e.
+
+Change-Id: I7303cdb17c7a1ee710be4e05d108d12219dd88f1
+Signed-off-by: Atchaya R <quic_ratchaya@quicinc.com>
+---
+ include/subdir.mk  | 15 ++++++++++-----
+ include/verbose.mk | 11 +++++++++++
+ 2 files changed, 21 insertions(+), 5 deletions(-)
+
+diff --git a/include/subdir.mk b/include/subdir.mk
+index 95009f814e..959cde49f5 100644
+--- a/include/subdir.mk
++++ b/include/subdir.mk
+@@ -32,6 +32,11 @@ subdir_make_opts = \
+ 		BUILD_VARIANT="$(4)" \
+ 		ALL_VARIANTS="$(5)"
+ 
++subdir_make_opts_V_e = \
++	-r -C $(1)/$(bd) $(target) \
++		BUILD_SUBDIR="$(1)" \
++		BUILD_VARIANT="$(filter-out __default,$(variant))"
++
+ # 1: subdir
+ # 2: target
+ # 3: build type
+@@ -64,16 +69,16 @@ define subdir
+     $(foreach target,$(SUBTARGETS) $($(1)/subtargets),
+       $(foreach btype,$(buildtypes-$(bd)),
+         $(call warn_eval,$(1)/$(bd),t,T,$(1)/$(bd)/$(btype)/$(target): $(if $(NO_DEPS)$(QUILT),,$($(1)/$(bd)/$(btype)/$(target)) $(call $(1)//$(btype)/$(target),$(1)/$(bd)/$(btype))))
+-		  $(call log_make,$(1)/$(bd),$(target),$(btype),$(filter-out __default,$(variant)),$($(1)/$(bd)/variants)) \
+-			|| $(call ERROR,$(2),   ERROR: $(1)/$(bd) [$(btype)] failed to build.,$(findstring $(bd),$($(1)/builddirs-ignore-$(btype)-$(target))))
++		  $(call log_make,$(1)/$(bd),$(target),$(btype),$(filter-out __default,$(variant))) $(if $(findstring e,$(OPENWRT_VERBOSE)),&& $(call SUCCESS_MESSAGE, make $(subdir_make_opts_V_e) finished) || { $(call ERROR_MESSAGE, make $(subdir_make_opts_V_e) failed); fail; }) \
++			$(if $(findstring $(bd),$($(1)/builddirs-ignore-$(btype)-$(target))), || $(call ERROR,$(1),   ERROR: $(1)/$(bd) [$(btype)] failed to build.))
+         $(if $(call diralias,$(bd)),$(call warn_eval,$(1)/$(bd),l,T,$(1)/$(call diralias,$(bd))/$(btype)/$(target): $(1)/$(bd)/$(btype)/$(target)))
+       )
+       $(call warn_eval,$(1)/$(bd),t,T,$(1)/$(bd)/$(target): $(if $(NO_DEPS)$(QUILT),,$($(1)/$(bd)/$(target)) $(call $(1)//$(target),$(1)/$(bd))))
+         $(foreach variant,$(filter-out *,$(if $(BUILD_VARIANT),$(BUILD_VARIANT),$(if $(strip $($(1)/$(bd)/variants)),$($(1)/$(bd)/variants),$(if $($(1)/$(bd)/default-variant),$($(1)/$(bd)/default-variant),__default)))),
+ 			$(if $(BUILD_LOG),@mkdir -p $(BUILD_LOG_DIR)/$(1)/$(bd)/$(filter-out __default,$(variant)))
+-			$(if $($(1)/autoremove),$(call rebuild_check,$(1)/$(bd),$(target),,$(filter-out __default,$(variant)),$($(1)/$(bd)/variants)))
+-			$(call log_make,$(1)/$(bd),$(target),,$(filter-out __default,$(variant)),$($(1)/$(bd)/variants)) \
+-				|| $(call ERROR,$(1),   ERROR: $(1)/$(bd) failed to build$(if $(filter-out __default,$(variant)), (build variant: $(variant))).,$(findstring $(bd),$($(1)/builddirs-ignore-$(target)))) 
++			$(if $($(1)/autoremove),$(call rebuild_check,$(1)/$(bd),$(target),,$(filter-out __default,$(variant))))
++			$(call log_make,$(1)/$(bd),$(target),,$(filter-out __default,$(variant))) $(if $(findstring e,$(OPENWRT_VERBOSE)),&& $(call SUCCESS_MESSAGE, make $(subdir_make_opts_V_e) finished) || { $(call ERROR_MESSAGE, make $(subdir_make_opts_V_e) failed); fail; }) \
++				$(if $(findstring $(bd),$($(1)/builddirs-ignore-$(target))), || $(call ERROR,$(1),   ERROR: $(1)/$(bd) failed to build$(if $(filter-out __default,$(variant)), (build variant: $(variant))).))
+         )
+       $(if $(PREREQ_ONLY)$(DUMP_TARGET_DB),,
+         # aliases
+diff --git a/include/verbose.mk b/include/verbose.mk
+index 4487a207e8..11327e015f 100644
+--- a/include/verbose.mk
++++ b/include/verbose.mk
+@@ -24,6 +24,7 @@ endif
+ ifeq ($(IS_TTY),1)
+   ifneq ($(strip $(NO_COLOR)),1)
+     _Y:=\\033[33m
++    _G:=\\033[32m
+     _R:=\\033[31m
+     _N:=\\033[m
+   endif
+@@ -38,6 +39,14 @@ ifeq ($(findstring s,$(OPENWRT_VERBOSE)),)
+ 	printf "$(_Y)%s$(_N)\n" "$(1)" >&8
+   endef
+ 
++  define SUCCESS_MESSAGE
++	printf "$(_G)%s$(_N)\n" "$(1)" >&8
++  endef
++
++  define ERROR_MESSAGE
++	printf "$(_R)%s$(_N)\n" "$(1)" >&8
++  endef
++
+   ifeq ($(QUIET),1)
+     ifneq ($(CURDIR),$(TOPDIR))
+       _DIR:=$(patsubst $(TOPDIR)/%,%,${CURDIR})
+@@ -60,4 +69,6 @@ else
+   define MESSAGE
+     printf "%s\n" "$(1)"
+   endef
++  ERROR_MESSAGE=$(MESSAGE)
++  SUCCESS_MESSAGE=$(MESSAGE)
+ endif
+-- 
+2.17.1
+

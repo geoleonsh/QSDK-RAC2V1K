@@ -1,0 +1,45 @@
+From da154e139c81f5544d10e35b916204b69b487866 Mon Sep 17 00:00:00 2001
+From: Ram Chandra Jangir <rjangir@codeaurora.org>
+Date: Tue, 14 Jul 2020 16:40:37 +0530
+Subject: [PATCH] rootdisk: Automatic say yes to make ext4 file system using mkfs.ext4
+
+Signed-off-by: Ram Chandra Jangir <rjangir@codeaurora.org>
+---
+libfstools/rootdisk.c | 2 +-
+1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libfstools/rootdisk.c b/libfstools/rootdisk.c
+index 5a6dcb9..c80dddd 100644
+--- a/libfstools/common.c
++++ b/libfstools/common.c
+@@ -166,7 +166,7 @@ do_format:
+ 		if (use_f2fs(v, offset, bdev))
+ 			snprintf(str, sizeof(str), "mkfs.f2fs -q -l rootfs_data %s", v->blk);
+ 		else
+-			snprintf(str, sizeof(str), "mkfs.ext4 -q -L rootfs_data %s", v->blk);
++			snprintf(str, sizeof(str), "echo y |mkfs.ext4 -q -L rootfs_data %s", v->blk);
+ 
+ 		ret = system(str);
+ 		break;
+--- a/libfstools/common.h
++++ b/libfstools/common.h
+@@ -19,7 +19,7 @@
+ #include "libfstools.h"
+ #include "volume.h"
+ 
+-#define F2FS_MINSIZE		(100ULL * 1024ULL * 1024ULL)
++#define F2FS_MINSIZE		(150ULL * 1024ULL * 1024ULL)
+ 
+ int read_uint_from_file(char *dirname, char *filename, unsigned int *i);
+ char *read_string_from_file(const char *dirname, const char *filename, char *buf, size_t bufsz);
+--- fstools-2022-11-10-3affe9ea.orig/libfstools/rootdisk.c
++++ fstools-2022-11-10-3affe9ea/libfstools/rootdisk.c
+@@ -16,7 +16,7 @@
+ #include <linux/loop.h>
+ 
+ #define ROOTDEV_OVERLAY_ALIGN	(64ULL * 1024ULL)
+-#define F2FS_MINSIZE		(100ULL * 1024ULL * 1024ULL)
++#define F2FS_MINSIZE		(150ULL * 1024ULL * 1024ULL)
+ 
+ struct squashfs_super_block {
+ 	uint32_t s_magic;

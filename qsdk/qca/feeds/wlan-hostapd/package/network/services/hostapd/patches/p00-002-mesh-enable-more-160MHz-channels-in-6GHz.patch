@@ -1,0 +1,110 @@
+From d6e52c4ef2bb8e915cae088564c412583f1794c9 Mon Sep 17 00:00:00 2001
+From: P Praneesh <quic_ppranees@quicinc.com>
+Date: Fri, 21 Jan 2022 09:44:15 +0530
+Subject: [PATCH] mesh: enable more 160MHz channels in 6GHz
+
+Current 160MHz implementation supports mesh bringup in limited channels.
+Allow all the 6GHz 80MHz channels to support 160MHz if the secondary 80MHz
+is available.
+
+Ex: User can bringup 160MHz in 49th channel (primary 80MHz) based on 33rd
+channel(secondary 80MHz) availablity.
+
+Signed-off-by: P Praneesh <quic_ppranees@quicinc.com>
+---
+ wpa_supplicant/wpa_supplicant.c | 21 ++++++++++++++++++---
+ 1 file changed, 18 insertions(+), 3 deletions(-)
+
+--- a/hostapd/config_file.c
++++ b/hostapd/config_file.c
+@@ -4284,6 +4284,8 @@ static int hostapd_config_fill(struct ho
+ 	} else if (os_strcmp(buf, "wowlan_triggers") == 0) {
+ 		os_free(bss->wowlan_triggers);
+ 		bss->wowlan_triggers = os_strdup(pos);
++	} else if (os_strcmp(buf, "enable_160mhz_bw") == 0) {
++		conf->enable_160mhz_bw = atoi(pos);
+ 	} else if (os_strcmp(buf, "disable_40mhz_scan") == 0) {
+ 		conf->disable_40mhz_scan = atoi(pos);
+ #ifdef CONFIG_FST
+--- a/src/ap/ap_config.h
++++ b/src/ap/ap_config.h
+@@ -1111,6 +1111,7 @@ struct hostapd_config {
+ 	} *acs_chan_bias;
+ 	unsigned int num_acs_chan_bias;
+ #endif /* CONFIG_ACS */
++	int enable_160mhz_bw;
+ 	int disable_40mhz_scan;
+ 
+ 	struct wpabuf *lci;
+--- a/src/drivers/driver.h
++++ b/src/drivers/driver.h
+@@ -1325,6 +1325,11 @@ struct wpa_driver_associate_params {
+ 	int beacon_tx_mode;
+ 
+ 	/**
++	 * Enable 160MHz BW - set it 1 to enable mesh 160MHz 6G
++	 */
++	int enable_160mhz_bw;
++
++	/**
+ 	 * disable_eht - Disable EHT for this connection
+ 	 */
+ 	int disable_eht;
+--- a/wpa_supplicant/config.c
++++ b/wpa_supplicant/config.c
+@@ -2878,6 +2878,7 @@ static const struct parse_data ssid_fiel
+ 	{ INT_RANGE(sae_pk, 0, 2) },
+ 	{ INT_RANGE(disable_40mhz_scan, 0, 1)},
+ 	{ INT_RANGE(beacon_tx_mode, 1, 2)},
++	{ INT_RANGE(enable_160mhz_bw, 0, 1)},
+ 	{ INT_RANGE(disable_eht, 0, 1)},
+ 	{ INT_RANGE(enable_4addr_mode, 0, 1)},
+ };
+--- a/wpa_supplicant/config_file.c
++++ b/wpa_supplicant/config_file.c
+@@ -899,6 +899,7 @@ static void wpa_config_write_network(FIL
+ 	INT(disable_eht);
+ 	INT(disable_40mhz_scan);
+ 	INT(beacon_tx_mode);
++	INT(enable_160mhz_bw);
+ 	INT(enable_4addr_mode);
+ 
+ #undef STR
+--- a/wpa_supplicant/config_ssid.h
++++ b/wpa_supplicant/config_ssid.h
+@@ -1269,6 +1269,11 @@ struct wpa_ssid {
+ 	int beacon_tx_mode;
+ 
+ 	/**
++	 * Enable 160MHz BW - set it 1 to enable mesh 160MHz 6G
++	 */
++	int enable_160mhz_bw;
++
++	/**
+ 	 * disable_eht - Disable EHT (IEEE 802.11be) for this network
+ 	 *
+ 	 * By default, use it if it is available, but this can be configured
+--- a/wpa_supplicant/wpa_cli.c
++++ b/wpa_supplicant/wpa_cli.c
+@@ -1501,6 +1501,7 @@ static const char *network_fields[] = {
+ 	"mac_addr", "pbss", "wps_disabled",
+ 	"disable_40mhz_scan",
+ 	"beacon_tx_mode",
++	"enable_160mhz_bw",
+ };
+ 
+ 
+--- a/wpa_supplicant/wpa_supplicant.conf
++++ b/wpa_supplicant/wpa_supplicant.conf
+@@ -1763,6 +1763,11 @@ fast_reauth=1
+ # In STA mode it defines the EDMG channel for connection (if supported by AP).
+ #edmg_channel=9
+ 
++#To configure 80MHz and 160MHz in Mesh mode.
++#Set 0 to enable 80MHz in Mesh mode
++#Set 1 to enable 160MHz in Mesh mode
++#enable_160mhz_bw=1
++
+ # Example blocks:
+ 
+ # Simple case: WPA-PSK, PSK as an ASCII passphrase, allow all valid ciphers

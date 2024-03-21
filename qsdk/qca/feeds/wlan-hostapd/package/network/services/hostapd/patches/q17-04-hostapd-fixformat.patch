@@ -1,0 +1,11 @@
+--- a/src/ap/ctrl_iface_ap.c
++++ b/src/ap/ctrl_iface_ap.c
+@@ -1022,7 +1022,7 @@ int hostapd_ctrl_iface_status(struct hos
+ 
+ 	if (mode) {
+ 		ret = os_snprintf(buf + len, buflen - len, "hw_mode=%s\n",
+-				  hw_mode_str(mode->mode));
++				  (char *)hw_mode_str(mode->mode));
+ 		if (os_snprintf_error(buflen - len, ret))
+ 			return len;
+ 		len += ret;

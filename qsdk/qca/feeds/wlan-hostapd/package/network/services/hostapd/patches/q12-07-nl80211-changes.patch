@@ -1,0 +1,52 @@
+From ab575cc076ee3758fd137516ebec54313d41558e Mon Sep 17 00:00:00 2001
+From: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
+Date: Fri, 7 Jul 2023 13:46:54 +0530
+Subject: [PATCH 2/2] nl80211: Change nl80211_copy.h to match nl80211 from
+ driver
+
+Change nl80211_copy.h to match nl80211 from driver.
+
+Signed-off-by: Ramasamy Kaliappan <quic_rkaliapp@quicinc.com>
+---
+ src/drivers/nl80211_copy.h | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+--- a/src/drivers/nl80211_copy.h
++++ b/src/drivers/nl80211_copy.h
+@@ -3338,6 +3338,8 @@ enum nl80211_attrs {
+ 	NL80211_ATTR_RADAR_BITMAP,
+ 	NL80211_ATTR_EHT_240MHZ_CAPABILITY,
+ 	/* add attributes here, update the policy in nl80211.c */
++	NL80211_ATTR_ADD_MULTI_CHAN,
++	NL80211_ATTR_DEL_MULTI_CHAN,
+ 
+ 	__NL80211_ATTR_AFTER_LAST,
+ 	NUM_NL80211_ATTR = __NL80211_ATTR_AFTER_LAST,
+@@ -5253,7 +5255,10 @@ enum nl80211_tx_rate_attributes {
+ 	NL80211_TXRATE_HE,
+ 	NL80211_TXRATE_HE_GI,
+ 	NL80211_TXRATE_HE_LTF,
++	NL80211_TXRATE_HE_UL,
+ 	NL80211_TXRATE_EHT,
++	NL80211_TXRATE_EHT_GI,
++	NL80211_TXRATE_EHT_LTF,
+ 
+ 	/* keep last */
+ 	__NL80211_TXRATE_AFTER_LAST,
+@@ -5370,6 +5375,7 @@ enum nl80211_attr_cqm {
+ 	NL80211_ATTR_CQM_TXE_INTVL,
+ 	NL80211_ATTR_CQM_BEACON_LOSS_EVENT,
+ 	NL80211_ATTR_CQM_RSSI_LEVEL,
++	NL80211_ATTR_CQM_MPATH_CHANGE_EVENT,
+ 
+ 	/* keep last */
+ 	__NL80211_ATTR_CQM_AFTER_LAST,
+@@ -5483,6 +5489,8 @@ enum nl80211_tid_config_attr {
+ 	NL80211_TID_CONFIG_ATTR_AMSDU_CTRL,
+ 	NL80211_TID_CONFIG_ATTR_TX_RATE_TYPE,
+ 	NL80211_TID_CONFIG_ATTR_TX_RATE,
++	NL80211_TID_CONFIG_ATTR_AMPDU_COUNT,
++	NL80211_TID_CONFIG_ATTR_AMSDU_COUNT,
+ 
+ 	/* keep last */
+ 	__NL80211_TID_CONFIG_ATTR_AFTER_LAST,

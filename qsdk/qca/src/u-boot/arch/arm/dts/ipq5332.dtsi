@@ -1,0 +1,301 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+* Copyright (c) 2023, Qualcomm Innovation Center, Inc. All rights reserved.
+*/
+
+/dts-v1/;
+
+#include "skeleton64.dtsi"
+#include <dt-bindings/pinctrl/pinctrl-ipqsoc.h>
+#include <dt-bindings/clock/gcc-ipq5332.h>
+#include <dt-bindings/reset/ipq5332-reset.h>
+
+/ {
+
+	model = "Qualcomm Technologies, Inc. IPQ5332";
+	compatible = "qti,ipq5332";
+
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		tz_mem: tz@4A600000 {
+			reg = <0x4A600000 0x200000>;
+			no-map;
+		};
+
+		smem_mem: smem_region@4A800000 {
+			reg = <0x4A800000 0x100000>;
+			no-map;
+		};
+	};
+
+	smem {
+		compatible = "qcom,smem";
+		memory-region = <&smem_mem>;
+		u-boot,dm-pre-reloc;
+	};
+
+	psci {
+		compatible = "arm,psci-1.0";
+		method = "smc";
+	};
+
+	soc: soc {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "simple-bus";
+
+		tlmm: pinctrl@1000000 {
+			compatible = "qti,ipqsoc-pinctrl";
+			reg = <0x1000000 0x300000>;
+			gpio-controller;
+			gpio-count = <79>;
+			gpio-bank-name="soc";
+			#gpio-cells = <2>;
+			u-boot,dm-pre-reloc;
+		};
+
+		gcc: clock-controller@1800000 {
+			compatible = "qti,gcc-ipq5332";
+			reg = <0x1800000 0x80000>;
+			#address-cells = <0x1>;
+			#size-cells = <0x1>;
+			#clock-cells = <1>;
+			u-boot,dm-pre-reloc;
+		};
+
+		nss: clock-controller@39B00000 {
+			compatible = "qti,gcc-ipq5332";
+			reg = <0x39B00000 0x80000>;
+			#address-cells = <0x1>;
+			#size-cells = <0x1>;
+			#clock-cells = <1>;
+		};
+
+		reset: gcc-reset@1800000 {
+			compatible = "qti,gcc-reset-ipqsoc";
+			reg = <0x1800000 0x80000>;
+			#clock-cells = <1>;
+			#reset-cells = <1>;
+			u-boot,dm-pre-reloc;
+		};
+
+		nss_reset: nss-reset@39B00000 {
+			compatible = "qti,gcc-reset-ipqsoc";
+			reg = <0x39B00000 0x80000>;
+			#clock-cells = <1>;
+			#reset-cells = <1>;
+		};
+
+
+		blsp_dma: dma@7884000 {
+			compatible = "qti,bam-v1.7.0";
+			reg = <0x07884000 0x1d000>;
+			clocks = <&gcc GCC_BLSP1_AHB_CLK>;
+			#dma-cells = <6>;
+			status = "okay";
+		};
+
+		blsp1_uart1: serial@78af000 {
+			compatible = "qcom,msm-uartdm-v1.4";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = <0x78af000 0x200>;
+			clock = <&gcc GCC_BLSP1_UART0_APPS_CLK>,
+				<&gcc GCC_BLSP1_AHB_CLK>;
+			bit-rate = <0xFF>;
+			status = "okay";
+			u-boot,dm-pre-reloc;
+		};
+
+		blsp1_spi: spi@78b5000 {
+			compatible = "qcom,spi-qup-v2.2.1";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x78b5000 0x600>;
+			clocks = <&gcc GCC_BLSP1_QUP1_SPI_APPS_CLK>;
+			dma-names = "tx", "rx";
+			dmas = <&blsp_dma 4 1 16 0 0xFFFF 16>,
+			     <&blsp_dma 5 2 16 0 0xFFFF 16>;
+			status = "disabled";
+			u-boot,dm-pre-reloc;
+		};
+
+		nand: nand-controller@79B0000 {
+			compatible = "qti,spi-nand-v2.1.1";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = <0x79B0000 0x10000>;
+			clocks = <&gcc GCC_QPIC_IO_MACRO_CLK>;
+			quad_mode = <1>;
+			quad_config_check = <1>;
+			bam_reg = <0x07984000>;
+			status_pipe = <3>;
+			status_pipe_grp = <0>;
+			read_pipe = <1>;
+			read_pipe_grp = <0>;
+			write_pipe = <0>;
+			write_pipe_grp = <0>;
+			cmd_pipe = <2>;
+			cmd_pipe_grp = <1>;
+			status = "okay";
+			u-boot,dm-pre-reloc;
+		};
+
+		mmc: sdhci@7800000 {
+			compatible = "qti,sdhci-msm-v5";
+			reg = <0x7804000 0x1000 0x7805000 0x1000>;
+			reg-names = "hc_mem", "cmdq_mem";
+			resets = <&reset GCC_SDCC1_BCR>;
+			reset-names = "bcr_rst";
+			clock = <&gcc GCC_SDCC1_APPS_CLK>,
+				<&gcc GCC_SDCC1_AHB_CLK>;
+			clock-frequency = <200000000>;
+			max-frequency = <200000000>;
+			sdhci-caps-mask = <0x0 0x04000000>;
+			sdhci-caps = <0x0 0x04000000>;
+			bus-width = <0x4>;
+			index = <0x0>;
+			non-removable;
+			mmc-ddr-1_8v;
+			mmc-hs200-1_8v;
+			bus_pwr_off_rst;
+			status = "okay";
+		};
+
+		mdio: mdio@90000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "qcom,ipq4019-mdio";
+			reg = <0x90000 0x64>;
+			status = "disabled";
+		};
+
+		ethernet: nss-switch {
+			compatible = "qti,ipq-nss-switch";
+			reg = <0x3ab00000 0xEF800 0x3A000000 0x1000000
+				0x7A00000 0x10000>;
+			reg-names = "edma_hw", "ppe_base", "uniphy_base";
+			assigned-clocks = <&gcc GCC_QDSS_AT_CLK>,
+					<&gcc GCC_PCNOC_BFDCD_CLK>,
+					<&nss NSS_CC_CFG_CLK>,
+					<&gcc GCC_SYSTEM_NOC_BFDCD_CLK>,
+					<&nss NSS_CC_PPE_CLK>;
+			assigned-clock-rates = <240000000>, <100000000>,
+						<100000000>,<266666667>,
+						<200000000>;
+			clocks = <&gcc GCC_QDSS_AT_CLK>,
+				<&gcc GCC_NSSCFG_CLK>,
+				<&gcc GCC_NSSNOC_ATB_CLK>,
+				<&gcc GCC_NSSNOC_QOSGEN_REF_CLK>,
+				<&gcc GCC_NSSNOC_TIMEOUT_REF_CLK>,
+				<&gcc GCC_NSSCC_CLK>,
+				<&gcc GCC_NSSNOC_NSSCC_CLK>,
+				<&nss NSS_CC_NSS_CSR_CLK>,
+				<&nss NSS_CC_NSSNOC_NSS_CSR_CLK>,
+				<&gcc GCC_IM_SLEEP_CLK>,
+				<&gcc GCC_CMN_12GPLL_AHB_CLK>,
+				<&gcc GCC_CMN_12GPLL_SYS_CLK>,
+				<&gcc GCC_UNIPHY0_SYS_CLK>,
+				<&gcc GCC_UNIPHY1_SYS_CLK>,
+				<&gcc GCC_UNIPHY0_AHB_CLK>,
+				<&gcc GCC_UNIPHY1_AHB_CLK>,
+				<&nss NSS_CC_PORT1_MAC_CLK>,
+				<&nss NSS_CC_PORT2_MAC_CLK>,
+				<&gcc GCC_MDIO_MASTER_AHB_CLK>,
+				<&nss NSS_CC_PPE_SWITCH_IPE_CLK>,
+				<&nss NSS_CC_PPE_SWITCH_CLK>,
+				<&nss NSS_CC_PPE_SWITCH_CFG_CLK>,
+				<&nss NSS_CC_PPE_EDMA_CLK>,
+				<&nss NSS_CC_PPE_EDMA_CFG_CLK>,
+				<&nss NSS_CC_NSSNOC_PPE_CLK>,
+				<&nss NSS_CC_NSSNOC_PPE_CFG_CLK>,
+				<&nss NSS_CC_PPE_SWITCH_BTQ_CLK>,
+				<&gcc GCC_NSSNOC_SNOC_CLK>,
+				<&gcc GCC_NSSNOC_SNOC_1_CLK>,
+				<&gcc GCC_MEM_NOC_SNOC_AXI_CLK>,
+				<&nss NSS_CC_PORT1_RX_CLK>,
+				<&nss NSS_CC_PORT1_TX_CLK>,
+				<&nss NSS_CC_PORT2_RX_CLK>,
+				<&nss NSS_CC_PORT2_TX_CLK>,
+				<&nss NSS_CC_UNIPHY_PORT1_RX_CLK>,
+				<&nss NSS_CC_UNIPHY_PORT1_TX_CLK>,
+				<&nss NSS_CC_UNIPHY_PORT2_RX_CLK>,
+				<&nss NSS_CC_UNIPHY_PORT2_TX_CLK>,
+				<&nss UNIPHY0_NSS_RX_CLK>,
+				<&nss UNIPHY0_NSS_TX_CLK>,
+				<&nss UNIPHY1_NSS_RX_CLK>,
+				<&nss UNIPHY1_NSS_TX_CLK>;
+
+			clock-names = "gcc_qdss_at_clk",
+				"gcc_nsscfg_clk",
+				"gcc_nssnoc_atb_clk",
+				"gcc_nssnoc_qosgen_ref_clk",
+				"gcc_nssnoc_timeout_ref_clk",
+				"gcc_nsscc_clk",
+				"gcc_nssnoc_nsscc_clk",
+				"nss_cc_nss_csr_clk",
+				"nss_cc_nssnoc_nss_csr_clk",
+				"gcc_im_sleep_clk",
+				"gcc_cmn_12gpll_ahb_clk",
+				"gcc_cmn_12gpll_sys_clk",
+				"gcc_uniphy0_sys_clk",
+				"gcc_uniphy1_sys_clk",
+				"gcc_uniphy0_ahb_clk",
+				"gcc_uniphy1_ahb_clk",
+				"nss_cc_port1_mac_clk",
+				"nss_cc_port2_mac_clk",
+				"nss_cc_ppe_switch_ipe_clk",
+				"nss_cc_ppe_switch_clk",
+				"nss_cc_ppe_switch_cfg_clk",
+				"nss_cc_ppe_edma_clk",
+				"nss_cc_ppe_edma_cfg_clk",
+				"nss_cc_nssnoc_ppe_clk",
+				"nss_cc_nssnoc_ppe_cfg_clk",
+				"nss_cc_ppe_switch_btq_clk",
+				"gcc_mdio_master_ahb_clk",
+				"gcc_nssnoc_snoc_clk",
+				"gcc_nssnoc_snoc_1_clk",
+				"gcc_mem_noc_snoc_axi_clk",
+				"nss_cc_port1_rx_clk",
+				"nss_cc_port1_tx_clk",
+				"nss_cc_port2_rx_clk",
+				"nss_cc_port2_tx_clk",
+				"nss_cc_uniphy_port1_rx_clk",
+				"nss_cc_uniphy_port1_tx_clk",
+				"nss_cc_uniphy_port2_rx_clk",
+				"nss_cc_uniphy_port2_tx_clk",
+				"uniphy0_nss_rx_clk",
+				"uniphy0_nss_tx_clk",
+				"uniphy1_nss_rx_clk",
+				"uniphy1_nss_tx_clk";
+
+			resets = <&reset GCC_UNIPHY0_SOFT_RESET>,
+				<&reset GCC_UNIPHY1_SOFT_RESET>,
+				<&reset GCC_UNIPHY0_XPCS_RESET>,
+				<&reset GCC_UNIPHY1_XPCS_RESET>,
+				<&reset GCC_UNIPHY0_BCR>,
+				<&reset GCC_UNIPHY1_BCR>,
+				<&nss_reset NSS_CC_PORT1_TX_RESET>,
+				<&nss_reset NSS_CC_PORT1_RX_RESET>,
+				<&nss_reset NSS_CC_PORT2_TX_RESET>,
+				<&nss_reset NSS_CC_PORT2_RX_RESET>,
+				<&nss_reset NSS_CC_PPE_BCR>;
+			reset-names = "uniphy0_srst", "uniphy1_srst",
+					"uniphy0_xrst", "uniphy1_xrst",
+					"uniphy0_bcr", "uniphy1_bcr",
+					"nss_cc_port1_tx",
+					"nss_cc_port1_rx",
+					"nss_cc_port2_tx",
+					"nss_cc_port2_tx",
+					"nss_cc_ppe_bcr";
+			tdm_offset = <0xc000>;
+			tdm_mode = <0>;
+			no_tdm_reg = <30>;
+			tdm_tm_support;
+			50mhz;
+			status = "disabled";
+		};
+	};
+};

@@ -1,0 +1,200 @@
+From 76a42b2ece51f2f311fbed24c7555ad56fcb2653 Mon Sep 17 00:00:00 2001
+From: Atchaya R <quic_ratchaya@quicinc.com>
+Date: Fri, 7 Jul 2023 14:20:08 +0530
+Subject: [PATCH] wifi: sbin/wifi script
+
+    /sbin/wifi: Allow pre/post configuration hook in wifi script
+    Fix wifi_detect if explicit driver type is provided
+    Enable 11ad hw_mode support
+    Enable provision to unload/load wifi modules
+    Fix enabling provision to unload,load wifi modules
+    Fix wifi_load if explicit driver type is provided
+    Add support for modules unload
+    Disable wifi interfaces during module unload
+    Adding support to handle traps in the wifi script
+    "wifi recover" command supported to recover VAPs.
+    Adding support for WEP152 in wifi script
+    Add radio specific recover support in wifi script
+    "Wifi detect is deprecated. Use wifi config instead"
+    Modify script to do VAP level wifi down/up
+    Add support to seperate out create and start vaps
+    Add support for MLD  option
+    wifi down/up for multi radio, multi VAPs
+    Fix post_driver call to send parameters as array
+    skip wifi bringup if /proc/cmdline has skip_wifi parameter
+    Add a new option in wifi script to carry out MLO operations
+
+Change-Id: Ife90b3bf69e47c9c16de000ae4da48d14d64f0e6
+Signed-off-by: Atchaya R <quic_ratchaya@quicinc.com>
+---
+ package/base-files/files/sbin/wifi | 78 ++++++++++++++++++++++++++++--
+ 1 file changed, 73 insertions(+), 5 deletions(-)
+
+diff --git a/package/base-files/files/sbin/wifi b/package/base-files/files/sbin/wifi
+index a3d3206ee732..146f10161e1d 100755
+--- a/package/base-files/files/sbin/wifi
++++ b/package/base-files/files/sbin/wifi
+@@ -78,7 +78,8 @@ prepare_key_wep() {
+ 
+ 	echo -n "$key" | grep -qE "[^a-fA-F0-9]" && hex=0
+ 	[ "${#key}" -eq 10 -a $hex -eq 1 ] || \
+-	[ "${#key}" -eq 26 -a $hex -eq 1 ] || {
++	[ "${#key}" -eq 26 -a $hex -eq 1 ] || \
++	[ "${#key}" -eq 32 -a $hex -eq 1 ] || {
+ 		[ "${key:0:2}" = "s:" ] && key="${key#s:}"
+ 		key="$(echo -n "$key" | hexdump -ve '1/1 "%02x" ""')"
+ 	}
+@@ -93,6 +94,7 @@ wifi_fixup_hwmode() {
+ 	config_get channel "$device" channel
+ 	config_get hwmode "$device" hwmode
+ 	case "$hwmode" in
++		11ad) hwmode=ad;;
+ 		11bg) hwmode=bg;;
+ 		11a) hwmode=a;;
+ 		11ad) hwmode=ad;;
+@@ -123,6 +125,12 @@ wifi_fixup_hwmode() {
+ }
+ 
+ _wifi_updown() {
++	for driver in ${DRIVERS}; do (
++		if eval "type pre_${driver}" 2>/dev/null >/dev/null; then
++			eval "pre_${driver}" ${1}
++		fi
++	); done
++
+ 	for device in ${2:-$DEVICES}; do (
+ 		config_get disabled "$device" disabled
+ 		[ "$disabled" = "1" ] && {
+@@ -132,17 +140,23 @@ _wifi_updown() {
+ 		config_get iftype "$device" type
+ 		if eval "type ${1}_$iftype" 2>/dev/null >/dev/null; then
+ 			eval "scan_$iftype '$device'"
+-			eval "${1}_$iftype '$device'" || echo "$device($iftype): ${1} failed"
++			eval "${1}_$iftype '$device' '$3'" || echo "$device($iftype): ${1} failed"
+ 		elif [ ! -f /lib/netifd/wireless/$iftype.sh ]; then
+ 			echo "$device($iftype): Interface type not supported"
+ 		fi
+ 	); done
++
++	for driver in ${DRIVERS}; do (
++		if eval "type post_${driver}" 2>/dev/null >/dev/null; then
++			eval "post_${driver} ${1} '$2' '$3'"
++		fi
++	); done
+ }
+ 
+ wifi_updown() {
+ 	cmd=down
+ 	[ enable = "$1" ] && {
+-		_wifi_updown disable "$2"
++		_wifi_updown disable "$2" "$3"
+ 		ubus_wifi_cmd "$cmd" "$2"
+ 		ubus call network reload
+ 		scan_wifi
+@@ -157,6 +171,11 @@ wifi_updown() {
+ 	_wifi_updown "$@"
+ }
+ 
++wifi_recover() {
++	_wifi_updown disable_recover "$1"
++	_wifi_updown enable_recover "$1"
++}
++
+ wifi_reload_legacy() {
+ 	_wifi_updown "disable" "$1"
+ 	scan_wifi
+@@ -186,6 +205,29 @@ wifi_config() {
+ 	); done
+ }
+ 
++wifi_unload() {
++	_wifi_updown "disable" "$1"
++	for driver in ${1:-$DRIVERS}; do (
++		if eval "type unload_$driver" 2>/dev/null >/dev/null; then
++			eval "unload_$driver" || echo "$driver: unload failed" >&2
++		else
++			echo "$driver: wifi unload not supported" >&2
++		fi
++	); done
++}
++
++wifi_load() {
++	wifi_unload
++	for driver in ${1:-$DRIVERS}; do (
++		if eval "type load_$driver" 2>/dev/null >/dev/null; then
++			eval "load_$driver" || echo "$driver: load failed" >&2
++		else
++			echo "$driver: wifi load not supported" >&2
++		fi
++	); done
++	_wifi_updown "enable" "$1"
++}
++
+ start_net() {(
+ 	local iface="$1"
+ 	local config="$2"
+@@ -224,6 +266,7 @@ set_wifi_down() {
+ scan_wifi() {
+ 	local cfgfile="$1"
+ 	DEVICES=
++	MLD_DEVICES=
+ 	config_cb() {
+ 		local type="$1"
+ 		local section="$2"
+@@ -246,26 +289,51 @@ scan_wifi() {
+ 				append vifs "$CONFIG_SECTION"
+ 				config_set "$device" vifs "$vifs"
+ 			;;
++			wifi-mld)
++				append MLD_DEVICES "$CONFIG_SECTION"
++			;;
+ 		esac
+ 	}
+ 	config_load "${cfgfile:-wireless}"
+ }
+ 
++wifi_trap() {
++	for driver in ${1:-$DRIVERS}; do (
++		if eval "type trap_$driver" 2>/dev/null >/dev/null; then
++			eval "trap_$driver" >&2
++		fi
++	); done
++}
++
+ DEVICES=
++MLD_DEVICES=
+ DRIVERS=
+ include /lib/wifi
+ scan_wifi
+ 
++trap 'wifi_trap; exit' INT TERM ABRT QUIT ALRM
++
++if grep -q 'skip_wifi' /proc/cmdline; then
++	echo "skipping wifi bringup" > /dev/console
++	exit 0
++fi
++
+ case "$1" in
+-	down) wifi_updown "disable" "$2";;
++	down) wifi_updown "disable" "$2" "$3";;
+ 	detect) wifi_detect_notice ;;
+ 	config) wifi_config ;;
+ 	status) ubus_wifi_cmd "status" "$2";;
+ 	isup) wifi_isup "$2"; exit $?;;
+ 	reload) wifi_reload "$2";;
+ 	reload_legacy) wifi_reload_legacy "$2";;
++	load) wifi_load "$2";;
++	unload) wifi_unload "$2";;
++	recover) wifi_recover "$2";;
++	mlo) mlo "$@";;
++        multi_up|\
++        multi_down) ubus call network reload; multi_radio_wifi_updown "$@";;
+ 	--help|help) usage;;
+ 	reconf) wifi_updown "reconf" "$2";;
+-	''|up) wifi_updown "enable" "$2";;
++	''|up) ubus call network reload; wifi_updown "enable" "$2" "$3" "wifi_up";;
+ 	*) usage; exit 1;;
+ esac
+-- 
+2.34.1
+

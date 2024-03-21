@@ -1,0 +1,41 @@
+From 75fb0e7c7b4ade44986e2a401c9dc684bc9aeb1d Mon Sep 17 00:00:00 2001
+From: leiwei <quic_leiwei@quicinc.com>
+Date: Thu, 16 Jul 2020 12:44:45 +0800
+Subject: [PATCH] uci: check and filter device option in switch_ext section
+
+porting change I2f9411453cb7853a2306d18f315df87af87e073c and
+I09c97fb3486ef06d8f84fdf0abe2faeebd9b52fc from fig
+
+Change-Id: I2f9411453cb7853a2306d18f315df87af87e073c
+Signed-off-by: leiwei <leiwei@codeaurora.org>
+Signed-off-by: leiwei <quic_leiwei@quicinc.com>
+---
+ package/network/config/swconfig/src/uci.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/package/network/config/swconfig/src/uci.c b/package/network/config/swconfig/src/uci.c
+index e1bef753b3c3..36879f6f21dd 100644
+--- a/package/network/config/swconfig/src/uci.c
++++ b/package/network/config/swconfig/src/uci.c
+@@ -254,6 +254,18 @@ found:
+ 
+ 			swlib_map_settings(dev, SWLIB_ATTR_GROUP_VLAN, vlan_n, s);
+ 		} else if (!strcmp(s->type, "switch_ext")) {
++			char *devn = NULL;
++			uci_foreach_element(&s->options, os) {
++				o = uci_to_option(os);
++				if (o->type != UCI_TYPE_STRING)
++					continue;
++
++				if (!strcmp(os->name, "device"))
++					devn = o->v.string;
++			}
++			if (devn && !swlib_match_name(dev, devn))
++				continue;
++
+ 			swlib_map_ext_attr_settings(dev, SWLIB_ATTR_GROUP_GLOBAL, 0, s);
+ 		}
+ 	}
+-- 
+2.34.1
+

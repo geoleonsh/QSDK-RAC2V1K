@@ -1,0 +1,177 @@
+From 673dd2d685d0dc27c44b75197defdd5d2d92ad9b Mon Sep 17 00:00:00 2001
+From: Ram Chandra Jangir <quic_rjangir@quicinc.com>
+Date: Mon, 1 May 2023 22:34:41 +0530
+Subject: [PATCH] xtables-addons: Fix compilation errors
+
+Signed-off-by: Ram Chandra Jangir <quic_rjangir@quicinc.com>
+---
+diff -Nur a/extensions/LUA/lua/lapi.c b/extensions/LUA/lua/lapi.c
+--- a/extensions/LUA/lua/lapi.c	2023-05-18 17:19:54.528265088 -0700
++++ b/extensions/LUA/lua/lapi.c	2023-05-18 17:20:58.027725819 -0700
+@@ -4,11 +4,10 @@
+ ** See Copyright Notice in lua.h
+ */
+ 
+-#include <string.h>
+-
+ #define lapi_c
+ #define LUA_CORE
+ 
++#include <string.h>
+ #include "lua.h"
+ 
+ #include "lapi.h"
+diff -Nur a/extensions/LUA/lua/lauxlib.h b/extensions/LUA/lua/lauxlib.h
+--- a/extensions/LUA/lua/lauxlib.h	2023-05-18 17:19:54.520265156 -0700
++++ b/extensions/LUA/lua/lauxlib.h	2023-05-18 17:20:58.027725819 -0700
+@@ -9,7 +9,6 @@
+ #define lauxlib_h
+ 
+ 
+-#include <stddef.h>
+ #include <linux/slab.h>	/* for kmalloc and kfree when allocating luaL_Buffer */
+ 
+ #if !defined(__KERNEL__)
+diff -Nur a/extensions/LUA/lua/ldebug.c b/extensions/LUA/lua/ldebug.c
+--- a/extensions/LUA/lua/ldebug.c	2023-05-18 17:19:54.524265122 -0700
++++ b/extensions/LUA/lua/ldebug.c	2023-05-18 17:21:24.843498113 -0700
+@@ -5,7 +5,6 @@
+ */
+ 
+ 
+-#include <stddef.h>
+ #include <string.h>
+ 
+ #define ldebug_c
+diff -Nur a/extensions/LUA/lua/ldump.c b/extensions/LUA/lua/ldump.c
+--- a/extensions/LUA/lua/ldump.c	2023-05-18 17:19:54.524265122 -0700
++++ b/extensions/LUA/lua/ldump.c	2023-05-18 17:20:58.027725819 -0700
+@@ -4,8 +4,6 @@
+ ** See Copyright Notice in lua.h
+ */
+ 
+-#include <stddef.h>
+-
+ #define ldump_c
+ #define LUA_CORE
+ 
+diff -Nur a/extensions/LUA/lua/lfunc.c b/extensions/LUA/lua/lfunc.c
+--- a/extensions/LUA/lua/lfunc.c	2023-05-18 17:19:54.524265122 -0700
++++ b/extensions/LUA/lua/lfunc.c	2023-05-18 17:20:58.027725819 -0700
+@@ -5,8 +5,6 @@
+ */
+ 
+ 
+-#include <stddef.h>
+-
+ #define lfunc_c
+ #define LUA_CORE
+ 
+diff -Nur a/extensions/LUA/lua/llimits.h b/extensions/LUA/lua/llimits.h
+--- a/extensions/LUA/lua/llimits.h	2023-05-18 17:19:54.528265088 -0700
++++ b/extensions/LUA/lua/llimits.h	2023-05-18 17:20:58.027725819 -0700
+@@ -7,8 +7,6 @@
+ #ifndef llimits_h
+ #define llimits_h
+ 
+-#include <stddef.h>
+-
+ #include "lua.h"
+ 
+ typedef LUAI_UINT32 lu_int32;
+diff -Nur a/extensions/LUA/lua/lmem.c b/extensions/LUA/lua/lmem.c
+--- a/extensions/LUA/lua/lmem.c	2023-05-18 17:19:54.524265122 -0700
++++ b/extensions/LUA/lua/lmem.c	2023-05-18 17:20:58.027725819 -0700
+@@ -5,8 +5,6 @@
+ */
+ 
+ 
+-#include <stddef.h>
+-
+ #define lmem_c
+ #define LUA_CORE
+ 
+diff -Nur a/extensions/LUA/lua/lmem.h b/extensions/LUA/lua/lmem.h
+--- a/extensions/LUA/lua/lmem.h	2023-05-18 17:19:54.524265122 -0700
++++ b/extensions/LUA/lua/lmem.h	2023-05-18 17:20:58.027725819 -0700
+@@ -8,8 +8,6 @@
+ #define lmem_h
+ 
+ 
+-#include <stddef.h>
+-
+ #include "llimits.h"
+ #include "lua.h"
+ 
+diff -Nur a/extensions/LUA/lua/lobject.h b/extensions/LUA/lua/lobject.h
+--- a/extensions/LUA/lua/lobject.h	2023-05-18 17:19:54.524265122 -0700
++++ b/extensions/LUA/lua/lobject.h	2023-05-18 17:20:58.027725819 -0700
+@@ -9,9 +9,6 @@
+ #define lobject_h
+ 
+ 
+-#include <stdarg.h>
+-
+-
+ #include "llimits.h"
+ #include "lua.h"
+ 
+diff -Nur a/extensions/LUA/lua/lstate.c b/extensions/LUA/lua/lstate.c
+--- a/extensions/LUA/lua/lstate.c	2023-05-18 17:19:54.524265122 -0700
++++ b/extensions/LUA/lua/lstate.c	2023-05-18 17:20:58.027725819 -0700
+@@ -5,8 +5,6 @@
+ */
+ 
+ 
+-#include <stddef.h>
+-
+ #define lstate_c
+ #define LUA_CORE
+ 
+diff -Nur a/extensions/LUA/lua/lstrlib.c b/extensions/LUA/lua/lstrlib.c
+--- a/extensions/LUA/lua/lstrlib.c	2023-05-18 17:19:54.524265122 -0700
++++ b/extensions/LUA/lua/lstrlib.c	2023-05-18 17:20:58.027725819 -0700
+@@ -6,7 +6,6 @@
+ 
+ 
+ #include <ctype.h>
+-#include <stddef.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+diff -Nur a/extensions/LUA/lua/ltablib.c b/extensions/LUA/lua/ltablib.c
+--- a/extensions/LUA/lua/ltablib.c	2023-05-18 17:19:54.524265122 -0700
++++ b/extensions/LUA/lua/ltablib.c	2023-05-18 17:20:58.027725819 -0700
+@@ -5,8 +5,6 @@
+ */
+ 
+ 
+-#include <stddef.h>
+-
+ #define ltablib_c
+ #define LUA_LIB
+ 
+diff -Nur a/extensions/LUA/lua/luaconf.h b/extensions/LUA/lua/luaconf.h
+--- a/extensions/LUA/lua/luaconf.h	2023-05-18 17:19:54.528265088 -0700
++++ b/extensions/LUA/lua/luaconf.h	2023-05-18 17:20:58.027725819 -0700
+@@ -8,8 +8,6 @@
+ #ifndef lconfig_h
+ #define lconfig_h
+ 
+-#include <stddef.h>
+-
+ #if !defined(__KERNEL__)
+ #include <limits.h>
+ #else
+diff -Nur a/extensions/LUA/lua/lua.h b/extensions/LUA/lua/lua.h
+--- a/extensions/LUA/lua/lua.h	2023-05-18 17:19:54.524265122 -0700
++++ b/extensions/LUA/lua/lua.h	2023-05-18 17:20:58.027725819 -0700
+@@ -9,8 +9,6 @@
+ #ifndef lua_h
+ #define lua_h
+ 
+-#include <stddef.h>
+-
+ #include "luaconf.h"
+ 
+ 

@@ -1,0 +1,10 @@
+--- a/net/wireless/nl80211.c
++++ b/net/wireless/nl80211.c
+@@ -32,6 +32,7 @@
+ #include "rdev-ops.h"
+ 
+ #define VLAN_N_VID	4096
++#define NLA_EXACT_LEN_WARN	19
+ 
+ static int nl80211_crypto_settings(struct cfg80211_registered_device *rdev,
+ 				   struct genl_info *info,

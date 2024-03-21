@@ -1,0 +1,38 @@
+From cc4f42f498b03f0ba325a93c48d8c03d425da795 Mon Sep 17 00:00:00 2001
+From: Murat Sezgin <msezgin@codeaurora.org>
+Date: Thu, 21 Jul 2016 13:27:53 -0700
+Subject: [PATCH] [ppp] Call the on-demand-down script when connection gets
+ down
+
+An on-demand-down script is called to clean up the offloaded
+connections. The script is called if it exists and the PPP
+mode is on-demand.
+
+Change-Id: Ib087ebe765eec139bce539545fca262a9b02af52
+Signed-off-by: Murat Sezgin <msezgin@codeaurora.org>
+Signed-off-by: Ken Zhu <quic_guigenz@quicinc.com>
+---
+ package/network/services/ppp/files/lib/netifd/ppp-down | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/package/network/services/ppp/files/lib/netifd/ppp-down b/package/network/services/ppp/files/lib/netifd/ppp-down
+index acb12cb6051e..6a22ea22b787 100755
+--- a/package/network/services/ppp/files/lib/netifd/ppp-down
++++ b/package/network/services/ppp/files/lib/netifd/ppp-down
+@@ -18,7 +18,12 @@ skip_idle_on_demand_mode()
+ 	[ -z "$demand" ] && return 1
+ 
+ 	#now ppp is in demand mode, and ppp interface is still up
+-	#so it is not a real down event, just skip it
++	#so it is not a real down event, just call the on-demand-down
++	#script, if it exists and skip the real down event operations.
++	[ -x /lib/netifd/offload/on-demand-down ] && {
++		/lib/netifd/offload/on-demand-down
++	}
++
+ 	return 0
+ }
+ 
+-- 
+2.34.1
+

@@ -1,0 +1,28 @@
+From 406988b8c5c4cd215ce3e441e3264972001832bf Mon Sep 17 00:00:00 2001
+From: Wen Gong <quic_wgong@quicinc.com>
+Date: Mon, 27 Feb 2023 22:53:32 -0500
+Subject: [PATCH 1/9] mlo: sme: enable debug_print log for wpa_scan_res_match()
+ in wpas_ml_element()
+
+Signed-off-by: Wen Gong <quic_wgong@quicinc.com>
+Signed-off-by: Amutha Ravikumar <quic_aravikum@quicinc.com>
+---
+ wpa_supplicant/sme.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/wpa_supplicant/sme.c b/wpa_supplicant/sme.c
+index f64072e00..675e61e1e 100644
+--- a/wpa_supplicant/sme.c
++++ b/wpa_supplicant/sme.c
+@@ -482,7 +482,7 @@ static bool wpas_ml_element(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
+ 			if (neigh_bss) {
+ 				if (wpa_scan_res_match(wpa_s, 0, neigh_bss,
+ 						       wpa_s->current_ssid,
+-						       1, 0)) {
++						       1, 1)) {
+ 					wpa_s->valid_links |= BIT(link_id);
+ 					os_memcpy(wpa_s->links[link_id].bssid,
+ 						  ap_info->data + 1, ETH_ALEN);
+-- 
+2.25.1
+

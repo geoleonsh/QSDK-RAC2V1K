@@ -1,0 +1,188 @@
+From 6d814327c4776bad883feaa7de7c021621440e6e Mon Sep 17 00:00:00 2001
+From: Saravanakumar Duraisamy <quic_saradura@quicinc.com>
+Date: Sat, 15 Jul 2023 16:15:01 +0530
+Subject: [PATCH] ath12k: qcn6432 bringup compliation fixes for kernel 6.1
+
+Some of the 5.4 kernel APIs changed either in arguments/name in
+6.1 kernel. Based on kernel version relavent APIs are made
+compiled.
+
+Signed-off-by: Saravanakumar Duraisamy <quic_saradura@quicinc.com>
+---
+ drivers/net/wireless/ath/ath11k/ahb.c  |  6 +-----
+ drivers/net/wireless/ath/ath11k/pcic.c | 17 +++++------------
+ drivers/net/wireless/ath/ath12k/ahb.c  |  7 ++-----
+ drivers/net/wireless/ath/ath12k/pcic.c | 23 ++++++++++++++---------
+ drivers/net/wireless/ath/ath12k/qmi.c  |  5 +++++
+ 5 files changed, 36 insertions(+), 32 deletions(-)
+
+diff --git a/drivers/net/wireless/ath/ath11k/ahb.c b/drivers/net/wireless/ath/ath11k/ahb.c
+index 975471a..9772cf4 100644
+--- a/drivers/net/wireless/ath/ath11k/ahb.c
++++ b/drivers/net/wireless/ath/ath11k/ahb.c
+@@ -579,13 +579,9 @@ static int ath11k_ahb_config_ext_irq(struct ath11k_base *ab)
+ 		irq_grp->ab = ab;
+ 		irq_grp->grp_id = i;
+ 		init_dummy_netdev(&irq_grp->napi_ndev);
+-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0))
+-		netif_napi_add(&irq_grp->napi_ndev, &irq_grp->napi,
+-			       ath11k_ahb_ext_grp_napi_poll, NAPI_POLL_WEIGHT);
+-#else
++
+ 		netif_napi_add_weight(&irq_grp->napi_ndev, &irq_grp->napi,
+ 			       ath11k_ahb_ext_grp_napi_poll, NAPI_POLL_WEIGHT);
+-#endif
+ 
+ 		for (j = 0; j < ATH11K_EXT_IRQ_NUM_MAX; j++) {
+ 			if (!nss_offload && ab->hw_params.ring_mask->tx[i] & BIT(j)) {
+diff --git a/drivers/net/wireless/ath/ath11k/pcic.c b/drivers/net/wireless/ath/ath11k/pcic.c
+index 607dffa..934dc70 100644
+--- a/drivers/net/wireless/ath/ath11k/pcic.c
++++ b/drivers/net/wireless/ath/ath11k/pcic.c
+@@ -531,13 +531,9 @@ static int ath11k_pcic_ext_irq_config(struct ath11k_base *ab)
+ 		irq_grp->ab = ab;
+ 		irq_grp->grp_id = i;
+ 		init_dummy_netdev(&irq_grp->napi_ndev);
+-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0))
+-		netif_napi_add(&irq_grp->napi_ndev, &irq_grp->napi,
+-			       ath11k_pcic_ext_grp_napi_poll, NAPI_POLL_WEIGHT);
+-#else
++
+ 		 netif_napi_add_weight(&irq_grp->napi_ndev, &irq_grp->napi,
+                                ath11k_pcic_ext_grp_napi_poll, NAPI_POLL_WEIGHT);
+-#endif
+ 
+ 		/* tcl, reo, rx_err, wbm release, rxdma rings are offloaded to nss. */
+ 		if (ab->nss.enabled &&
+@@ -802,13 +798,9 @@ int ath11k_pcic_ext_config_gic_msi_irq(struct ath11k_base *ab, struct platform_d
+ 	irq_grp->ab = ab;
+ 	irq_grp->grp_id = i;
+ 	init_dummy_netdev(&irq_grp->napi_ndev);
+-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0))
+-	netif_napi_add(&irq_grp->napi_ndev, &irq_grp->napi,
+-		       ath11k_pcic_ext_grp_napi_poll, NAPI_POLL_WEIGHT);
+-#else
++
+ 	netif_napi_add_weight(&irq_grp->napi_ndev, &irq_grp->napi,
+ 		       ath11k_pcic_ext_grp_napi_poll, NAPI_POLL_WEIGHT);
+-#endif
+ 
+ 	if (ab->hw_params.ring_mask->tx[i] ||
+ 	    ab->hw_params.ring_mask->rx[i] ||
+@@ -904,8 +896,9 @@ int ath11k_pcic_ipci_config_irq(struct ath11k_base *ab)
+ 		ath11k_warn(ab, "failed to alloc irqs %d ab %pM\n", ret, ab);
+ 		return ret;
+ 	}
++
+ #if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0))
+-	for_each_msi_entry(msi_desc, &pdev->dev) {
++		for_each_msi_entry(msi_desc, &pdev->dev) {
+ #else
+         msi_for_each_desc(msi_desc, &pdev->dev, MSI_DESC_ALL) {
+ #endif
+@@ -940,7 +933,7 @@ int ath11k_pcic_ipci_config_irq(struct ath11k_base *ab)
+ 	}
+ 
+ #if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0))
+-	for_each_msi_entry(msi_desc, &pdev->dev) {
++		for_each_msi_entry(msi_desc, &pdev->dev) {
+ #else
+         msi_for_each_desc(msi_desc, &pdev->dev, MSI_DESC_ALL) {
+ #endif
+diff --git a/drivers/net/wireless/ath/ath12k/ahb.c b/drivers/net/wireless/ath/ath12k/ahb.c
+index 2228ddc..dc73404 100644
+--- a/drivers/net/wireless/ath/ath12k/ahb.c
++++ b/drivers/net/wireless/ath/ath12k/ahb.c
+@@ -514,13 +514,10 @@ static int ath12k_ahb_config_ext_irq(struct ath12k_base *ab)
+ 		irq_grp->ab = ab;
+ 		irq_grp->grp_id = i;
+ 		init_dummy_netdev(&irq_grp->napi_ndev);
+-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0))
+-		netif_napi_add(&irq_grp->napi_ndev, &irq_grp->napi,
+-			       ath12k_ahb_ext_grp_napi_poll, NAPI_POLL_WEIGHT);
+-#else
++
+ 		 netif_napi_add_weight(&irq_grp->napi_ndev, &irq_grp->napi,
+                                ath12k_ahb_ext_grp_napi_poll, NAPI_POLL_WEIGHT);
+-#endif
++
+ 		for (j = 0; j < ATH12K_EXT_IRQ_NUM_MAX; j++) {
+ 			if (ab->hw_params->ring_mask->tx[i]  &&
+ 					(j <= ATH12K_MAX_TCL_RING_NUM) &&
+diff --git a/drivers/net/wireless/ath/ath12k/pcic.c b/drivers/net/wireless/ath/ath12k/pcic.c
+index 2d15e6b..c6b1b4b 100644
+--- a/drivers/net/wireless/ath/ath12k/pcic.c
++++ b/drivers/net/wireless/ath/ath12k/pcic.c
+@@ -385,7 +385,7 @@ static int ath12k_pcic_ext_config_gic_msi_irq(struct ath12k_base *ab, struct pla
+ 	if (ab->hw_params->ring_mask->tx[i])
+ 		budget = tx_comp_budget;
+ 
+-        netif_napi_add(&irq_grp->napi_ndev, &irq_grp->napi,
++        netif_napi_add_weight(&irq_grp->napi_ndev, &irq_grp->napi,
+                         ath12k_pcic_ext_grp_napi_poll, budget);
+ 
+         if (ab->hw_params->ring_mask->tx[i] ||
+@@ -663,13 +663,10 @@ static int ath12k_pci_ext_irq_config(struct ath12k_base *ab)
+ 		 * enqueue operation */
+ 		if (ab->hw_params->ring_mask->tx[i])
+ 			budget = tx_comp_budget;
+-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0))
+-		netif_napi_add(&irq_grp->napi_ndev, &irq_grp->napi,
+-			       ath12k_pcic_ext_grp_napi_poll, budget);
+-#else
++
+ 		 netif_napi_add_weight(&irq_grp->napi_ndev, &irq_grp->napi,
+                                ath12k_pcic_ext_grp_napi_poll,budget);
+-#endif
++
+ 
+ 		if (ab->hw_params->ring_mask->tx[i] ||
+ 		    ab->hw_params->ring_mask->rx[i] ||
+@@ -810,8 +807,12 @@ int ath12k_pcic_config_hybrid_irq(struct ath12k_base *ab)
+ 		return ret;
+ 	}
+ 
+-	//TODO: Need to optimize the below code to have one loop
+-	for_each_msi_entry(msi_desc, &pdev->dev) {
++	/* TODO: Need to optimize the below code to have one loop */
++#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0))
++		for_each_msi_entry(msi_desc, &pdev->dev) {
++#else
++        msi_for_each_desc(msi_desc, &pdev->dev, MSI_DESC_ALL) {
++#endif
+ 		ret = ath12k_pcic_get_user_msi_assignment(ab, "CE", &num_vectors,
+                                                          &user_base_data, &base_vector);
+                 if (ret < 0)
+@@ -857,7 +858,11 @@ int ath12k_pcic_config_hybrid_irq(struct ath12k_base *ab)
+ 
+ 	i = 0;
+ 
+-	for_each_msi_entry(msi_desc, &pdev->dev) {
++#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0))
++		for_each_msi_entry(msi_desc, &pdev->dev) {
++#else
++        msi_for_each_desc(msi_desc, &pdev->dev, MSI_DESC_ALL) {
++#endif
+ 		ret = ath12k_pcic_get_user_msi_assignment(ab, "CE", &num_vectors,
+ 							  &user_base_data, &base_vector);
+ 		if (ret < 0)
+diff --git a/drivers/net/wireless/ath/ath12k/qmi.c b/drivers/net/wireless/ath/ath12k/qmi.c
+index e100291..f60963f 100644
+--- a/drivers/net/wireless/ath/ath12k/qmi.c
++++ b/drivers/net/wireless/ath/ath12k/qmi.c
+@@ -5611,7 +5611,12 @@ static int ath12k_qmi_request_device_info(struct ath12k_base *ab)
+                 goto out;
+         }
+ 
++#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0))
+         bar_addr_va = ioremap_nocache(resp.bar_addr, resp.bar_size);
++#else
++        bar_addr_va = ioremap(resp.bar_addr, resp.bar_size);
++#endif
++
+ 
+         if (!bar_addr_va) {
+                 ath12k_warn(ab, "qmi device info ioremap failed\n");
+-- 
+2.17.1
+

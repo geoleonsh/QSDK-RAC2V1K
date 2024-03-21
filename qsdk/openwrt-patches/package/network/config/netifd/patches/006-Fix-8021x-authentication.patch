@@ -1,0 +1,26 @@
+--- a/scripts/netifd-wireless.sh	2023-04-14 17:59:08.210976608 -0700
++++ b/scripts/netifd-wireless.sh	2023-04-14 18:01:29.901783963 -0700
+@@ -211,6 +211,7 @@
+ 	auth_type=none
+ 	wpa=0
+ 	wpa_cipher=
++	eapol_key_index_workaround=0
+ 
+ 	if [ "$hwmode" = "ad" ]; then
+ 		wpa_cipher="GCMP"
+@@ -284,8 +285,14 @@
+ 		*psk*)
+ 			auth_type=psk
+ 		;;
+-		*wpa*|*8021x*)
++		*wpa*)
+ 			auth_type=eap
++			eapol_key_index_workaround=1
++		;;
++		*8021x*)
++			auth_type=eap
++			eapol_version=2
++			eap_server=0
+ 		;;
+ 		*wep*)
+ 			auth_type=wep

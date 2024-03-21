@@ -1,0 +1,62 @@
+From 33b31bc942af7b8801c5cd555afd0fadbcb76331 Mon Sep 17 00:00:00 2001
+From: Ermine Jose <quic_erminejo@quicinc.com>
+Date: Wed, 19 Apr 2023 15:31:26 +0530
+Subject: [PATCH 02/12] qsdk: add openwrt support for qsdk profiles
+
+Change-Id: I4e0d5358a9cb1530551e8aec764016d8ea152210
+Signed-off-by: Ermine Jose <quic_erminejo@quicinc.com>
+---
+ include/image.mk           | 2 +-
+ include/scan.mk            | 3 ++-
+ scripts/target-metadata.pl | 1 -
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/include/image.mk b/include/image.mk
+index 0eae216ded..a60037a07c 100644
+--- a/include/image.mk
++++ b/include/image.mk
+@@ -474,7 +474,7 @@ endef
+ define Device/Check
+   $(Device/Check/Common)
+   KDIR_KERNEL_IMAGE := $(KDIR)/$(1)$$(KERNEL_SUFFIX)
+-  _TARGET := $$(if $$(_PROFILE_SET),install-images,install-disabled)
++  _TARGET := install-images
+   ifndef IB
+     _COMPILE_TARGET := $$(if $(CONFIG_IB)$$(_PROFILE_SET),compile,compile-disabled)
+   endif
+diff --git a/include/scan.mk b/include/scan.mk
+index 12ef5d1dc7..4eb670da96 100644
+--- a/include/scan.mk
++++ b/include/scan.mk
+@@ -10,6 +10,7 @@ SCAN_DIR ?= package
+ TARGET_STAMP:=$(TMP_DIR)/info/.files-$(SCAN_TARGET).stamp
+ FILELIST:=$(TMP_DIR)/info/.files-$(SCAN_TARGET)-$(SCAN_COOKIE)
+ OVERRIDELIST:=$(TMP_DIR)/info/.overrides-$(SCAN_TARGET)-$(SCAN_COOKIE)
++QSDK_PACKAGE_DIR:=$(TOPDIR)/target/linux/feeds
+ 
+ export ORIG_PATH:=$(if $(ORIG_PATH),$(ORIG_PATH),$(PATH))
+ export PATH:=$(STAGING_DIR_HOST)/bin:$(PATH)
+@@ -19,7 +20,7 @@ $(if $(patsubst feeds/%,,$(1)),,$(word 2,$(subst /, ,$(1))))
+ endef
+ 
+ ifeq ($(SCAN_NAME),target)
+-  SCAN_DEPS=image/Makefile profiles/*.mk $(TOPDIR)/include/kernel*.mk $(TOPDIR)/include/target.mk image/*.mk
++  SCAN_DEPS=image/Makefile profiles/*.mk $(QSDK_PACKAGE_DIR)/profiles/*.mk $(TOPDIR)/include/kernel*.mk $(TOPDIR)/include/target.mk image/*.mk
+ else
+   SCAN_DEPS=$(TOPDIR)/include/package*.mk
+ ifneq ($(call feedname,$(SCAN_DIR)),)
+diff --git a/scripts/target-metadata.pl b/scripts/target-metadata.pl
+index e1d4ef242b..040a20e705 100755
+--- a/scripts/target-metadata.pl
++++ b/scripts/target-metadata.pl
+@@ -265,7 +265,6 @@ EOF
+ endchoice
+ 
+ menu "Target Devices"
+-	depends on TARGET_MULTI_PROFILE
+ 
+ 	config TARGET_ALL_PROFILES
+ 		bool "Enable all profiles by default"
+-- 
+2.17.1
+

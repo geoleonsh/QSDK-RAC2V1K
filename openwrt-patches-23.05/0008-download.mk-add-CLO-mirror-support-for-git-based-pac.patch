@@ -1,0 +1,109 @@
+From 626d2102751518f11c0f3f7748a2d083f5e2a819 Mon Sep 17 00:00:00 2001
+From: Atchaya R <quic_ratchaya@quicinc.com>
+Date: Tue, 21 Mar 2023 11:10:26 +0530
+Subject: [PATCH 08/12] download.mk: add CLO mirror support for git based
+ packages
+
+This change includes SKIP_MIRROR_DOWNLOAD feature as well.
+
+This change includes the makefiles in the qsdk-package
+project to be evaluated for Download macros for packages.
+
+Change-Id: I6e8df254c9b2b37d8c7a2b7c5a697018d25acfa7
+Signed-off-by: Atchaya R <quic_ratchaya@quicinc.com>
+---
+ config/Config-devel.in |  4 ++++
+ include/download.mk    | 25 +++++++++++++++++++++++--
+ 2 files changed, 27 insertions(+), 2 deletions(-)
+
+diff --git a/config/Config-devel.in b/config/Config-devel.in
+index cbac91c09d..6ae0a45297 100644
+--- a/config/Config-devel.in
++++ b/config/Config-devel.in
+@@ -43,6 +43,10 @@ menuconfig DEVEL
+ 		string "Local mirror for source packages" if DEVEL
+ 		default ""
+ 
++	config GIT_MIRROR
++		string "Git mirror" if DEVEL
++		default ""
++
+ 	config AUTOREBUILD
+ 		bool "Automatic rebuild of packages" if DEVEL
+ 		default y
+diff --git a/include/download.mk b/include/download.mk
+index 9ab0b6c08f..cbd25ca10c 100644
+--- a/include/download.mk
++++ b/include/download.mk
+@@ -16,6 +16,10 @@ ifdef PKG_SOURCE_VERSION
+   PKG_SOURCE ?= $(PKG_SOURCE_SUBDIR).tar.xz
+ endif
+ 
++ifndef SKIP_MIRROR_DOWNLOAD
++SKIP_MIRROR_DOWNLOAD = false
++endif
++
+ DOWNLOAD_RDEP=$(STAMP_PREPARED) $(HOST_STAMP_PREPARED)
+ 
+ # Export options for download.pl
+@@ -138,6 +142,13 @@ check_md5 = \
+ hash_var = $(if $(filter-out x,$(1)),MD5SUM,HASH)
+ endif
+ 
++define git_mirror_download
++	GIT_NAME=$$$$(echo $(URL) | sed -e s:.*/::g -e s/.git$$$$//g); \
++	[ -n "${CONFIG_GIT_MIRROR}" ] && \
++	git clone $(if $(BRANCH),-b $(BRANCH)) $(CONFIG_GIT_MIRROR)$$$$GIT_NAME $(SUBDIR) --recursive && \
++	(cd $(SUBDIR) && git remote -v && git checkout $(VERSION))
++endef
++
+ define DownloadMethod/unknown
+ 	echo "ERROR: No download method available"; false
+ endef
+@@ -220,9 +231,10 @@ define DownloadMethod/rawgit
+ 	cd $(TMP_DIR)/dl && \
+ 	rm -rf $(SUBDIR) && \
+ 	[ \! -d $(SUBDIR) ] && \
+-	git clone $(OPTS) $(URL) $(SUBDIR) && \
++	((if $(SKIP_MIRROR_DOWNLOAD) ; then 0; else $(call git_mirror_download); fi ) || \
++	(rm -rf $(SUBDIR) && git clone $(OPTS) $(URL) $(SUBDIR) && \
+ 	(cd $(SUBDIR) && git checkout $(VERSION) && \
+-	git submodule update --init --recursive) && \
++	git submodule update --init --recursive))) && \
+ 	echo "Packing checkout..." && \
+ 	export TAR_TIMESTAMP=`cd $(SUBDIR) && git log -1 --format='@%ct'` && \
+ 	rm -rf $(SUBDIR)/.git && \
+@@ -293,6 +305,7 @@ define Download/Defaults
+   FILE:=
+   URL_FILE:=
+   PROTO:=
++  BRANCH:=
+   HASH=$$(MD5SUM)
+   MD5SUM:=x
+   SUBDIR:=
+@@ -307,6 +320,7 @@ define Download/default
+   FILE:=$(PKG_SOURCE)
+   URL:=$(PKG_SOURCE_URL)
+   URL_FILE:=$(PKG_SOURCE_URL_FILE)
++  BRANCH:=$(PKG_SOURCE_BRANCH)
+   SUBDIR:=$(PKG_SOURCE_SUBDIR)
+   PROTO:=$(PKG_SOURCE_PROTO)
+   $(if $(PKG_SOURCE_MIRROR),MIRROR:=$(filter 1,$(PKG_MIRROR)))
+@@ -317,7 +331,14 @@ define Download/default
+   $(if $(PKG_HASH),HASH:=$(PKG_HASH))
+ endef
+ 
++FindPackage?=$(strip $(shell find $(TOPDIR)/qsdk-package -name $(1) 2>/dev/null))
++
++define Download/qsdk-package
++  $(eval -include $(wildcard $(call FindPackage,$(basename $(notdir $(CURDIR))))/$(PKG_NAME).mk))
++endef
++
+ define Download
++  $(Download/qsdk-package)
+   $(eval $(Download/Defaults))
+   $(eval $(Download/$(1)))
+   $(foreach FIELD,URL FILE $(Validate/$(call dl_method,$(URL),$(PROTO))),
+-- 
+2.17.1
+

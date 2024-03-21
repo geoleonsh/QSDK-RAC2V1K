@@ -1,0 +1,30 @@
+From eebe64c703fe33716187246e2e5dcd81dfffdf74 Mon Sep 17 00:00:00 2001
+From: Ram Chandra Jangir <quic_rjangir@quicinc.com>
+Date: Fri, 2 Jun 2023 19:19:21 +0530
+Subject: [PATCH 10/12] tools: Disable patchelf tool
+
+patchelf is failing to compile with gcc v7.5, hence disable
+it for now.
+
+Change-Id: I622c358324174a2271d8b03309293f66af453450
+Signed-off-by: Ram Chandra Jangir <quic_rjangir@quicinc.com>
+---
+ tools/Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/Makefile b/tools/Makefile
+index 40c3ec1ab0..fabe95661e 100644
+--- a/tools/Makefile
++++ b/tools/Makefile
+@@ -60,7 +60,7 @@ tools-y += mtools
+ tools-y += ninja
+ tools-y += padjffs2
+ tools-y += patch-image
+-tools-y += patchelf
++#tools-y += patchelf
+ tools-y += pkgconf
+ tools-y += quilt
+ tools-y += squashfs4
+-- 
+2.17.1
+

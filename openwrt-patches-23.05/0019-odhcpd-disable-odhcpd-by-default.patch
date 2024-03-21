@@ -1,0 +1,29 @@
+From 8c65b4b690e7722bc1ba1ad7251d900d9cd46a0d Mon Sep 17 00:00:00 2001
+From: Ken Zhu <guigenz@codeaurora.org>
+Date: Wed, 13 May 2020 17:14:25 -0700
+Subject: [PATCH] odhcpd: disable odhcpd by default
+
+odhcpd impact performance, disable it by default.
+
+Change-Id: Ib81c182cb6e4802abae1994d371a29b8c50a2de6
+Signed-off-by: Ken Zhu <guigenz@codeaurora.org>
+---
+ package/network/services/odhcpd/files/odhcpd.defaults | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/package/network/services/odhcpd/files/odhcpd.defaults b/package/network/services/odhcpd/files/odhcpd.defaults
+index 1350636ba430..a2fb8dca0e02 100644
+--- a/package/network/services/odhcpd/files/odhcpd.defaults
++++ b/package/network/services/odhcpd/files/odhcpd.defaults
+@@ -50,3 +50,8 @@ add_list dhcp.lan.ra_flags=managed-config
+ add_list dhcp.lan.ra_flags=other-config
+ commit dhcp
+ EOF
++
++/etc/init.d/odhcpd enabled && {
++	/etc/init.d/odhcpd stop
++	/etc/init.d/odhcpd disable
++}
+-- 
+2.34.1
+

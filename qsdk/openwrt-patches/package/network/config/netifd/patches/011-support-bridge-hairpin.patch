@@ -1,0 +1,81 @@
+diff -Nur -X patern.txt a/bridge.c b/bridge.c
+--- a/bridge.c	2022-08-25 12:13:35.000000000 -0700
++++ b/bridge.c	2023-04-14 20:53:37.065866513 -0700
+@@ -35,6 +35,7 @@
+ 	BRIDGE_ATTR_BRIDGE_EMPTY,
+ 	BRIDGE_ATTR_MULTICAST_QUERIER,
+ 	BRIDGE_ATTR_HASH_MAX,
++	BRIDGE_ATTR_HAIRPIN,
+ 	BRIDGE_ATTR_ROBUSTNESS,
+ 	BRIDGE_ATTR_QUERY_INTERVAL,
+ 	BRIDGE_ATTR_QUERY_RESPONSE_INTERVAL,
+@@ -58,6 +59,7 @@
+ 	[BRIDGE_ATTR_BRIDGE_EMPTY] = { "bridge_empty", BLOBMSG_TYPE_BOOL },
+ 	[BRIDGE_ATTR_MULTICAST_QUERIER] = { "multicast_querier", BLOBMSG_TYPE_BOOL },
+ 	[BRIDGE_ATTR_HASH_MAX] = { "hash_max", BLOBMSG_TYPE_INT32 },
++	[BRIDGE_ATTR_HAIRPIN] = { "hairpin", BLOBMSG_TYPE_BOOL },
+ 	[BRIDGE_ATTR_ROBUSTNESS] = { "robustness", BLOBMSG_TYPE_INT32 },
+ 	[BRIDGE_ATTR_QUERY_INTERVAL] = { "query_interval", BLOBMSG_TYPE_INT32 },
+ 	[BRIDGE_ATTR_QUERY_RESPONSE_INTERVAL] = { "query_response_interval", BLOBMSG_TYPE_INT32 },
+@@ -442,6 +444,7 @@
+ 	}
+ 
+ 	device_set_present(&bst->dev, true);
++	system_bridge_set_hairpin(bm->dev.dev, bst->config.hairpin);
+ 	device_broadcast_event(&bst->dev, DEV_EVENT_TOPO_CHANGE);
+ 
+ 	return 0;
+@@ -1049,6 +1052,7 @@
+ 	cfg->bridge_empty = false;
+ 	cfg->priority = 0x7FFF;
+ 	cfg->vlan_filtering = false;
++	cfg->hairpin = false;
+ 
+ 	cfg->forward_delay = 8;
+ 	cfg->max_age = 10;
+@@ -1112,6 +1116,9 @@
+ 	if ((cur = tb[BRIDGE_ATTR_BRIDGE_EMPTY]))
+ 		cfg->bridge_empty = blobmsg_get_bool(cur);
+ 
++	if ((cur = tb[BRIDGE_ATTR_HAIRPIN]))
++		cfg->hairpin = blobmsg_get_bool(cur);
++
+ 	if ((cur = tb[BRIDGE_ATTR_VLAN_FILTERING]))
+ 		cfg->vlan_filtering = blobmsg_get_bool(cur);
+ }
+diff -Nur -X patern.txt a/system.h b/system.h
+--- a/system.h	2022-08-25 12:13:35.000000000 -0700
++++ b/system.h	2023-04-14 20:54:41.769311010 -0700
+@@ -206,6 +206,7 @@
+ 	int hello_time;
+ 	int max_age;
+ 	int hash_max;
++	int hairpin;
+ 
+ 	bool vlan_filtering;
+ };
+@@ -315,6 +316,7 @@
+ int system_bridge_delbr(struct device *bridge);
+ int system_bridge_addif(struct device *bridge, struct device *dev);
+ int system_bridge_delif(struct device *bridge, struct device *dev);
++void system_bridge_set_hairpin(struct device *dev, int enable);
+ int system_bridge_vlan(const char *iface, uint16_t vid, bool add, unsigned int vflags);
+ int system_bridge_vlan_check(struct device *dev, char *ifname);
+ void system_bridge_set_stp_state(struct device *dev, bool val);
+diff -Nur -X patern.txt a/system-linux.c b/system-linux.c
+--- a/system-linux.c	2022-08-25 12:13:35.000000000 -0700
++++ b/system-linux.c	2023-04-18 10:32:28.274375681 -0700
+@@ -1044,6 +1044,13 @@
+ 	return 0;
+ }
+ 
++void system_bridge_set_hairpin(struct device *dev, int enable)
++{
++	char mode[4];
++	snprintf(mode, sizeof(mode), "%d", !!enable);
++	system_set_dev_sysctl("brport", "hairpin_mode", dev->ifname, mode);
++}
++
+ int system_if_resolve(struct device *dev)
+ {
+ 	struct ifreq ifr;

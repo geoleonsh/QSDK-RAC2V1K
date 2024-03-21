@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+* Copyright (c) 2023, Qualcomm Innovation Center, Inc. All rights reserved.
+*/
+
+#include "ipq9574-rdp433.dts"
+
+/ {
+	config_name = "config@al02-c1","config@rdp418", "config-rdp418";
+
+};

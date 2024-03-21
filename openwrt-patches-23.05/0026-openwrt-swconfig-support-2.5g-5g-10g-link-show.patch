@@ -1,0 +1,36 @@
+From f4eadcf8c66e12b79ea9e1c0c52eae2a7ad19ebe Mon Sep 17 00:00:00 2001
+From: leiwei <quic_leiwei@quicinc.com>
+Date: Sun, 20 Dec 2020 14:10:16 +0800
+Subject: [PATCH] openwrt:swconfig:support 2.5g,5g,10g link show
+
+new openwrt swconfig cli support receiving SWITCH_TYPE_LINK attr type genl msg
+from swconfig kernel. add support of show port link 2.5g, 5g and 10g in the
+swconfig cli.
+
+Change-Id: Idab266f3156d76e883e75a11e514e09c076a8d63
+Signed-off-by: leiwei <leiwei@codeaurora.org>
+Signed-off-by: leiwei <quic_leiwei@quicinc.com>
+---
+ package/network/config/swconfig/src/cli.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/package/network/config/swconfig/src/cli.c b/package/network/config/swconfig/src/cli.c
+index eab6c64742e9..2878d790c2b6 100644
+--- a/package/network/config/swconfig/src/cli.c
++++ b/package/network/config/swconfig/src/cli.c
+@@ -94,6 +94,12 @@ speed_str(int speed)
+ 		return "100baseT";
+ 	case 1000:
+ 		return "1000baseT";
++	case 2500:
++		return "2500baseT";
++	case 5000:
++		return "5000baseT";
++	case 10000:
++		return "10000baseT";
+ 	default:
+ 		break;
+ 	}
+-- 
+2.34.1
+

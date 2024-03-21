@@ -1,0 +1,241 @@
+From 7b158a8ed3371dc101b404c4c746efb5f50a9dd2 Mon Sep 17 00:00:00 2001
+From: xiaofeis <xiaofeis@codeaurora.org>
+Date: Tue, 10 Mar 2020 15:58:13 +0800
+Subject: [PATCH] Support "switch_ext" type configuration through UCI
+
+To meet TR069 requirement on Switch, many types of UCI configuration
+need to be supported for swconfig. A new type named SWITCH_ATTR_EXT
+is introduced to meet the goal. Following is the example of FDB
+entry's UCI configuration corresponding parameters & commands
+definition:
+uci set network.@switch_ext[-1].device="switch0"
+uci set network.@switch_ext[-1].name="switch_fdb_entry"
+uci set network.@switch_ext[-1].addr="11-22-33-44-55-66"
+uci set network.@switch_ext[-1].fid="60000"
+uci set network.@switch_ext[-1].dacmd="forward"
+uci set network.@switch_ext[-1].sacmd="sacmd"
+uci set network.@switch_ext[-1].dest_port="1"
+uci set network.@switch_ext[-1].static="yes"
+uci set network.@switch_ext[-1].leaky="no"
+uci set network.@switch_ext[-1].mirror="no"
+uci set network.@switch_ext[-1].clone="no"
+uci set network.@switch_ext[-1].queue_override="no"
+uci set network.@switch_ext[-1].cross_pt_state="no"
+uci set network.@switch_ext[-1].white_list_en="no"
+
+Change-Id: Ibc387c2adb6d79ff123df53728d68c80ef9407a8
+Signed-off-by: xiaofeis <xiaofeis@codeaurora.org>
+---
+ package/network/config/swconfig/src/swlib.c | 40 ++++++++++++
+ package/network/config/swconfig/src/swlib.h |  8 +++
+ package/network/config/swconfig/src/uci.c   | 72 +++++++++++++++++++++
+ 3 files changed, 120 insertions(+)
+
+diff --git a/package/network/config/swconfig/src/swlib.c b/package/network/config/swconfig/src/swlib.c
+index 0e09a1505ba2..147b2de4535b 100644
+--- a/package/network/config/swconfig/src/swlib.c
++++ b/package/network/config/swconfig/src/swlib.c
+@@ -338,6 +338,39 @@ nla_put_failure:
+ 	return -1;
+ }
+ 
++static int
++send_attr_ext(struct nl_msg *msg, struct switch_val *val)
++{
++	struct nlattr *n;
++	struct switch_ext *switch_ext_p;
++	int i;
++
++	n = nla_nest_start(msg, SWITCH_ATTR_OP_VALUE_EXT);
++	if (!n)
++		goto nla_put_failure;
++
++	switch_ext_p = val->value.ext_val;
++	while(switch_ext_p) {
++		struct nlattr *np;
++		np = nla_nest_start(msg, SWITCH_ATTR_EXT);
++		if (!np)
++			goto nla_put_failure;
++
++		NLA_PUT_STRING(msg, SWITCH_EXT_NAME, switch_ext_p->option_name);
++		NLA_PUT_STRING(msg, SWITCH_EXT_VALUE, switch_ext_p->option_value);
++
++		nla_nest_end(msg, np);
++		switch_ext_p = switch_ext_p->next;
++	}
++
++	nla_nest_end(msg, n);
++done:
++	return 0;
++
++nla_put_failure:
++	return -1;
++}
++
+ static int
+ send_attr_link(struct nl_msg *msg, struct switch_val *val)
+ {
+@@ -386,6 +419,10 @@ send_attr_val(struct nl_msg *msg, void *arg)
+ 		if (send_attr_ports(msg, val) < 0)
+ 			goto nla_put_failure;
+ 		break;
++	case SWITCH_TYPE_EXT:
++		if (send_attr_ext(msg, val) < 0)
++			goto nla_put_failure;
++		break;
+ 	case SWITCH_TYPE_LINK:
+ 		if (send_attr_link(msg, val))
+ 			goto nla_put_failure;
+@@ -527,6 +564,9 @@ int swlib_set_attr_string(struct switch_dev *dev, struct switch_attr *a, int por
+ 		if (str && !strcmp(str, "0"))
+ 			return 0;
+ 
++		break;
++	case SWITCH_TYPE_EXT:
++		val.value.ext_val = (struct switch_ext *)str;
+ 		break;
+ 	default:
+ 		return -1;
+diff --git a/package/network/config/swconfig/src/swlib.h b/package/network/config/swconfig/src/swlib.h
+index 3826a5e34028..545f783a9565 100644
+--- a/package/network/config/swconfig/src/swlib.h
++++ b/package/network/config/swconfig/src/swlib.h
+@@ -114,6 +114,7 @@ struct switch_dev;
+ struct switch_attr;
+ struct switch_port;
+ struct switch_port_map;
++struct switch_ext;
+ struct switch_port_link;
+ struct switch_val;
+ struct uci_package;
+@@ -143,6 +144,7 @@ struct switch_val {
+ 		char *s;
+ 		int i;
+ 		struct switch_port *ports;
++		struct switch_ext *ext_val;
+ 		struct switch_port_link *link;
+ 	} value;
+ };
+@@ -167,6 +169,12 @@ struct switch_portmap {
+ 	char *segment;
+ };
+ 
++struct switch_ext {
++	const char *option_name;
++	const char *option_value;
++	struct switch_ext *next;
++};
++
+ struct switch_port_link {
+ 	int link:1;
+ 	int duplex:1;
+diff --git a/package/network/config/swconfig/src/uci.c b/package/network/config/swconfig/src/uci.c
+index 200069f94f3e..e1bef753b3c3 100644
+--- a/package/network/config/swconfig/src/uci.c
++++ b/package/network/config/swconfig/src/uci.c
+@@ -42,6 +42,7 @@ struct swlib_setting {
+ 	const char *name;
+ 	int port_vlan;
+ 	const char *val;
++	struct switch_ext *ext_val;
+ 	struct swlib_setting *next;
+ };
+ 
+@@ -105,6 +106,69 @@ skip:
+ 	}
+ }
+ 
++static int
++swlib_map_ext_attr_settings(struct switch_dev *dev, int type, int port_vlan, struct uci_section *s)
++{
++	struct swlib_setting *setting;
++	struct switch_attr *attr;
++	struct uci_element *e;
++	struct uci_option *o;
++	struct switch_ext *switch_ext_p, *switch_ext_tmp;
++	int i;
++
++	attr = swlib_lookup_attr(dev, SWLIB_ATTR_GROUP_GLOBAL, s->type);
++	if (!attr)
++		return 0;
++
++	setting = malloc(sizeof(struct swlib_setting));
++	memset(setting, 0, sizeof(struct swlib_setting));
++	setting->attr = attr;
++	setting->port_vlan = port_vlan;
++	switch_ext_p = setting->ext_val;
++
++	uci_foreach_element(&s->options, e) {
++		o = uci_to_option(e);
++
++		if (o->type != UCI_TYPE_STRING)
++			continue;
++
++		if (!strcmp(e->name, "device"))
++			continue;
++
++		/* map early settings */
++		if (type == SWLIB_ATTR_GROUP_GLOBAL) {
++			int i;
++
++			for (i = 0; i < ARRAY_SIZE(early_settings); i++) {
++				if (strcmp(e->name, early_settings[i].name) != 0)
++					continue;
++
++				early_settings[i].val = o->v.string;
++				goto skip;
++			}
++		}
++
++		switch_ext_tmp = malloc(sizeof(struct switch_ext));
++		memset(switch_ext_tmp, 0, sizeof(struct switch_ext));
++		switch_ext_tmp->option_name = e->name;
++		switch_ext_tmp->option_value = o->v.string;
++		if(!switch_ext_p) {
++			setting->ext_val = switch_ext_tmp;
++		} else {
++			switch_ext_p->next = switch_ext_tmp;
++		}
++		switch_ext_p = switch_ext_tmp;
++
++skip:
++		continue;
++	}
++
++	setting->val = (char *)setting->ext_val;
++	*head = setting;
++	head = &setting->next;
++}
++
++
+ int swlib_apply_from_uci(struct switch_dev *dev, struct uci_package *p)
+ {
+ 	struct switch_attr *attr;
+@@ -189,6 +253,8 @@ found:
+ 				continue;
+ 
+ 			swlib_map_settings(dev, SWLIB_ATTR_GROUP_VLAN, vlan_n, s);
++		} else if (!strcmp(s->type, "switch_ext")) {
++			swlib_map_ext_attr_settings(dev, SWLIB_ATTR_GROUP_GLOBAL, 0, s);
+ 		}
+ 	}
+ 	uci_foreach_element(&p->sections, e) {
+@@ -234,9 +300,15 @@ found:
+ 
+ 	while (settings) {
+ 		struct swlib_setting *st = settings;
++		struct switch_ext *switch_ext_p = settings->ext_val;
+ 
+ 		swlib_set_attr_string(dev, st->attr, st->port_vlan, st->val);
+ 		st = st->next;
++		while(switch_ext_p) {
++			struct switch_ext *ext_value_p = switch_ext_p;
++			switch_ext_p = switch_ext_p->next;
++			free(ext_value_p);
++		}
+ 		free(settings);
+ 		settings = st;
+ 	}
+-- 
+2.34.1
+

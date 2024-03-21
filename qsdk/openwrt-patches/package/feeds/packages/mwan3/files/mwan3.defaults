@@ -1,0 +1,9 @@
+#!/bin/sh
+
+uci -q batch <<-EOT
+	set mwan3.wan.enabled='0'
+	commit mwan3
+EOT
+/etc/init.d/mwan3 disable
+/etc/init.d/mwan3 stop
+exit 0

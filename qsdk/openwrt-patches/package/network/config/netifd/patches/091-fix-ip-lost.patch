@@ -1,0 +1,52 @@
+Author: Ken Zhu <guigenz@codeaurora.org>
+Date:   Thu Dec 17 09:08:39 2020 -0800
+
+    netifd: fix ip lost after dhcp renew
+
+    When two more IPv4 addresses of the same subnetwork are assigned
+    to one device, if the primary address got deleted, the rest IP
+    addresses could be deleted as well.
+
+    To make sure that old IPv4 address deleted before assigning the
+    new address, both of them  must be proceeded in one time.
+
+    Change-Id: Ib989955c1511a14d34a5a45df1ad7e8713815b42
+    Signed-off-by: Ken Zhu <guigenz@codeaurora.org>
+
+diff -Nur -X patern.txt a/interface-ip.c b/interface-ip.c
+--- a/interface-ip.c	2023-04-18 11:39:22.609152258 -0700
++++ b/interface-ip.c	2023-04-18 11:52:54.922460484 -0700
+@@ -524,6 +524,11 @@
+ 	free(route);
+ }
+ 
++/*
++ * addr_cmp
++ *  return 0 if two ipv6 addresses and its netmask are same
++ *  return 0 if two ipv4 addresses are in the same subnetwork.
++ */
+ static int
+ addr_cmp(const void *k1, const void *k2, void *ptr)
+ {
+@@ -534,6 +539,13 @@
+ 
+ 	if (a1->index != a2->index)
+ 		return a1->index - a2->index;
++
++	if (((a1->flags & DEVADDR_FAMILY) == DEVADDR_INET4)
++			&& ((a2->flags & DEVADDR_FAMILY) == DEVADDR_INET4)) {
++		return (ntohl(a1->addr.in.s_addr) & (~((1 << (32 - a1->mask)) - 1))) !=
++			(ntohl(a2->addr.in.s_addr) & (~((1 << (32 - a2->mask)) - 1)));
++	}
++
+ 	return memcmp(k1+cmp_offset, k2+cmp_offset, cmp_size);
+ }
+ 
+@@ -683,6 +695,7 @@
+ 
+ 		if (((a_new->flags & DEVADDR_FAMILY) == DEVADDR_INET4) &&
+ 		     (a_new->broadcast != a_old->broadcast ||
++		      a_new->addr.in.s_addr != a_old->addr.in.s_addr ||
+ 		      a_new->point_to_point != a_old->point_to_point))
+ 			keep = false;
+ 	}
